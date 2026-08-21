@@ -262,3 +262,112 @@ def save_results(results_df, predictions_df, summary_df, prefix="time_aware_vali
     predictions_df.to_csv(RESULTS_DIR / f"{prefix}_predictions.csv", index=False)
     summary_df.to_csv(RESULTS_DIR / f"{prefix}_summary.csv")
     return sorted(p.name for p in RESULTS_DIR.glob(f"{prefix}_*.csv"))
+
+
+# --------------------------------------------------------------------------
+# Grouped cross-validation
+# --------------------------------------------------------------------------
+# The walk-forward split asks whether a model can reach a later year. This
+# asks the orthogonal question: whether it can reach a country and commodity
+# it has never been trained on. Every row for a given country-commodity pair
+# falls entirely on one side of the split, so the test set contains only
+# combinations the model has not seen.
+#
+# Both baselines forecast within a (country, commodity, stage) group, which
+# by construction never appears in training here. Their fallback rate is
+# therefore total, and they collapse to a global constant. That is not a
+# defect in the baselines -- it is the point. It shows what the split is
+# asking for, and gives the models something to beat that is genuinely naive
+# about unseen groups.
+GROUPED_CV_COLS = ["country", "commodity"]
+
+
+def grouped_cv(df, n_splits=5, model_names=None, year_mode="scaled", verbose=True):
+    """Cross-validate with whole country-commodity pairs held out.
+
+    Returns ``(results_df, predictions_df)`` in the same shape as
+    ``walk_forward``, so the two splits can be compared directly.
+    """
+    from sklearn.model_selection import GroupKFold
+
+    model_names = model_names or MODEL_NAMES
+    groups = df[GROUPED_CV_COLS].astype(str).agg("|".join, axis=1).to_numpy()
+
+    results = []
+    predictions = []
+    splitter = GroupKFold(n_splits=n_splits)
+
+    for fold, (train_idx, test_idx) in enumerate(splitter.split(df, groups=groups), start=1):
+        train_df = df.iloc[train_idx]
+        test_df = df.iloc[test_idx]
+
+        n_train_groups = len(set(groups[train_idx]))
+        n_test_groups = len(set(groups[test_idx]))
+        if verbose:
+            print(
+                f"=== Fold {fold}  (train n={len(train_df)} / {n_train_groups} groups, "
+                f"test n={len(test_df)} / {n_test_groups} groups) ==="
+            )
+
+        X_train = train_df[GROUP_COLS + ["year"]]
+        y_train = train_df[TARGET]
+        X_test = test_df[GROUP_COLS + ["year"]]
+        y_test = test_df[TARGET]
+
+        for base_name, base_fn in BASELINES.items():
+            preds, fallback_rate = base_fn(train_df, test_df)
+            metrics = score(y_test, preds)
+            results.append(
+                dict(fold=fold, model=base_name, n_test=len(test_df),
+                     fallback_rate=fallback_rate, fitted=True, **metrics)
+            )
+            predictions.append(
+                pd.DataFrame(dict(fold=fold, model=base_name, y_true=y_test.to_numpy(),
+                                  y_pred=np.asarray(preds), year=test_df["year"].to_numpy()))
+            )
+            if verbose:
+                print(
+                    f"  {base_name:<22}: MSE={metrics['mse']:.4f} MAE={metrics['mae']:.4f} "
+                    f"R2={metrics['r2']:.4f} (fallback rate: {fallback_rate:.1%})"
+                )
+
+        for name in model_names:
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore")
+                pipe = build_pipeline(name, year_mode=year_mode)
+                pipe.fit(X_train, y_train)
+                preds = pipe.predict(X_test)
+
+            metrics = score(y_test, preds)
+            results.append(
+                dict(fold=fold, model=name, n_test=len(test_df),
+                     fallback_rate=np.nan, fitted=True, **metrics)
+            )
+            predictions.append(
+                pd.DataFrame(dict(fold=fold, model=name, y_true=y_test.to_numpy(),
+                                  y_pred=np.asarray(preds), year=test_df["year"].to_numpy()))
+            )
+            if verbose:
+                print(
+                    f"  {name:<22}: MSE={metrics['mse']:.4f} "
+                    f"MAE={metrics['mae']:.4f} R2={metrics['r2']:.4f}"
+                )
+        if verbose:
+            print()
+
+    return pd.DataFrame(results), pd.concat(predictions, ignore_index=True)
+
+
+def summarise_grouped(results_df):
+    """Aggregate grouped-CV folds into the mean +/- std table."""
+    return (
+        results_df.groupby("model")
+        .agg(
+            mse_mean=("mse", "mean"), mse_std=("mse", "std"),
+            mae_mean=("mae", "mean"), mae_std=("mae", "std"),
+            r2_mean=("r2", "mean"), r2_std=("r2", "std"),
+            n_folds=("r2", "count"),
+        )
+        .round(4)
+        .sort_values("r2_mean", ascending=False)
+    )

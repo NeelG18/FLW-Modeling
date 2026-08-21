@@ -71,6 +71,13 @@ All notable changes to the analysis code are recorded here.
 
 ### Added
 
+- Grouped cross-validation holding out whole country-commodity pairs,
+  reported alongside the walk-forward split. The two answer different
+  questions: whether a model reaches a later year, and whether it reaches
+  a country and commodity combination absent from training. Both
+  baselines forecast within a group that never appears in training under
+  this split, so they fall back completely and collapse to a global
+  constant; their fallback rate is reported to make that explicit.
 - Duplicate feature-tuple audit reporting the repeat rate, the largest
   repeated group, and the share of test rows whose exact feature tuple
   also appears in training under the random split.
