@@ -20,6 +20,12 @@ TEST_SIZE = 0.20
 
 YEAR_MODES = ["none", "raw", "scaled"]
 
+_METRIC_KEYS = (
+    "test_mse", "test_mae", "test_r2",
+    "train_mse", "train_mae", "train_r2",
+    "delta_r2", "delta_mse", "delta_mae",
+)
+
 
 def make_random_split(df, include_year=True, seed=RANDOM_SPLIT_SEED):
     """The original random 80/20 split, kept for continuity of comparison."""
@@ -71,24 +77,40 @@ def year_ablation(df, model_names=None, year_modes=None, verbose=True):
                 df, include_year=(year_mode != "none")
             )
 
-            with warnings.catch_warnings():
-                warnings.simplefilter("ignore")
-                pipe = build_pipeline(name, year_mode=year_mode)
-                pipe.fit(X_train, y_train)
-                metrics = _score_both_sides(pipe, X_train, X_test, y_train, y_test)
+            status = "ok"
+            metrics = {k: float("nan") for k in _METRIC_KEYS}
+
+            try:
+                with warnings.catch_warnings():
+                    warnings.simplefilter("ignore")
+                    pipe = build_pipeline(name, year_mode=year_mode)
+                    pipe.fit(X_train, y_train)
+                    metrics = _score_both_sides(pipe, X_train, X_test, y_train, y_test)
+            except (ValueError, MemoryError) as exc:
+                # A configuration that cannot be fitted is a result, not an
+                # error to route around. Recording it keeps the comparison
+                # honest: substituting a different preprocessing step and
+                # still labelling the row with the requested one would
+                # report a number the configuration never produced.
+                status = f"failed: {exc}"
 
             elapsed = time.time() - t0
-            rows.append(dict(model=name, year_mode=year_mode, seconds=elapsed, **metrics))
+            rows.append(
+                dict(model=name, year_mode=year_mode, seconds=elapsed, status=status, **metrics)
+            )
 
             if verbose:
-                print(
-                    f"{name:<18}{year_mode:<10}"
-                    f"test_mse={metrics['test_mse']:<12.4f}"
-                    f"test_r2={metrics['test_r2']:<10.4f}"
-                    f"train_r2={metrics['train_r2']:<10.4f}"
-                    f"delta_r2={metrics['delta_r2']:<10.4f}"
-                    f"{elapsed:.1f}s"
-                )
+                if status == "ok":
+                    print(
+                        f"{name:<18}{year_mode:<10}"
+                        f"test_mse={metrics['test_mse']:<12.4f}"
+                        f"test_r2={metrics['test_r2']:<10.4f}"
+                        f"train_r2={metrics['train_r2']:<10.4f}"
+                        f"delta_r2={metrics['delta_r2']:<10.4f}"
+                        f"{elapsed:.1f}s"
+                    )
+                else:
+                    print(f"{name:<18}{year_mode:<10}DID NOT FIT — {status[8:]}")
         if verbose:
             print()
 

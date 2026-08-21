@@ -4,6 +4,38 @@ All notable changes to the analysis code are recorded here.
 
 ## [Unreleased]
 
+### Fixed
+
+- Notebook no longer references pipeline variables that were never
+  defined. `neural_pipeline` and `dtpipeline` are now built and fitted
+  through `pipelines.build_pipeline`, so the notebook runs from a clean
+  kernel instead of depending on state from a prior session.
+- Axis-limit calculation in the supply-stage and commodity comparison
+  plots raised `ValueError: min() arg is an empty sequence` when the
+  requested year had no observations, because every actual value was
+  missing and the empty series was passed to `min()`. Limits are now
+  computed over the finite values across both series, with a fallback
+  when none exist. This affected both plotting functions, not just the
+  one that surfaced it.
+
+### Changed
+
+- Year ablation records configurations that cannot be fitted instead of
+  aborting the run. The multi-layer perceptron does not converge with an
+  unscaled `year` feature (the solver produces non-finite weights), which
+  is now reported as a failed fit with its reason. Previously this case
+  was given a standardised `year` while still being labelled as the
+  unscaled configuration, so the table reported a figure that
+  configuration never produced.
+
+- Visualization helpers moved from the notebook into
+  `src/visualization.py`, leaving the notebook as orchestration only.
+- The separate year-aware and year-agnostic prediction helpers are
+  replaced by single functions taking an optional `year`. The duplicated
+  pair was the reason the missing-year fix had to be applied twice.
+- Notebook outputs are not stored; generated tables are written to
+  `results/` instead.
+
 ### Added
 
 - Repository structure: `src/` package holding the analysis modules,

@@ -20,3 +20,10 @@ __pycache__/
 # ---------------------------------------------------------------------------
 scratch/
 *.log
+
+# ---------------------------------------------------------------------------
+# Large regenerable intermediates
+# ---------------------------------------------------------------------------
+# Per-row prediction dumps run to several MB and are rebuilt by re-running
+# the validation. The metric tables alongside them are committed.
+results/*_predictions.csv
