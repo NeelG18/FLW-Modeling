@@ -1,0 +1,17 @@
+food_supply_stage,n_measurements,mean_loss,pct_of_measurements
+Harvest,4057,5.014,37.3
+Storage,3015,3.56,27.72
+Transport,2014,1.725,18.52
+Retail,526,11.806,4.84
+Processing,410,5.571,3.77
+Wholesale,303,8.441,2.79
+Households,226,15.345,2.08
+Market,83,3.738,0.76
+Trader,83,7.893,0.76
+Export,50,10.878,0.46
+Packing,37,5.722,0.34
+Distribution,23,5.404,0.21
+Food Services,21,10.134,0.19
+Collector,16,9.96,0.15
+Grading,11,8.227,0.1
+Stacking,1,2.1,0.01

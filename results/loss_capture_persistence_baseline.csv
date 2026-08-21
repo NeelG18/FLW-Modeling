@@ -1,0 +1,5 @@
+k_pct,loss_captured_pct,perfect_ranking_pct,random_pct,efficiency_vs_perfect
+1,5.328,9.664,1,0.551
+5,14.473,27.476,5,0.527
+10,22.971,38.276,10,0.6
+20,41.821,52.495,20,0.797

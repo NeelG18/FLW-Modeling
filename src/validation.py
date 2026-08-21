@@ -98,6 +98,39 @@ def score(y_true, y_pred):
     }
 
 
+
+def adjusted_r2(r2, n_samples, n_features):
+    """R-squared penalised for the number of predictors.
+
+    One-hot encoding these three categoricals produces several hundred
+    columns, so the penalty is not cosmetic: unadjusted R-squared rewards a
+    model simply for having a wide design matrix. Returns NaN when there
+    are too few observations to support the penalty.
+    """
+    denominator = n_samples - n_features - 1
+    if denominator <= 0:
+        return float("nan")
+    return 1 - (1 - r2) * (n_samples - 1) / denominator
+
+
+def skill_score(model_error, reference_error):
+    """Fractional error reduction against a reference predictor.
+
+    Positive means better than the reference, zero means equal, negative
+    means worse. Unlike R-squared this is comparable across splits, because
+    it is not normalised by the test set's own variance, and its reference
+    is a forecast someone would actually use rather than the test mean.
+    """
+    if reference_error == 0:
+        return float("nan")
+    return 1 - (model_error / reference_error)
+
+
+def encoded_width(pipeline, X):
+    """Number of columns the fitted preprocessor produces for ``X``."""
+    return pipeline[:-1].transform(X).shape[1]
+
+
 def walk_forward(
     df,
     cutoff_years=None,

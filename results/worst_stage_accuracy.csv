@@ -1,0 +1,11 @@
+model,n_comparisons,correct_pct,chance_pct,lift
+Decision Tree,587,72.743,33.997,2.14
+KNN,587,78.365,33.997,2.305
+Linear Regression,587,81.772,33.997,2.405
+Linear trend baseline,587,74.276,33.997,2.185
+Neural Network,587,76.32,33.997,2.245
+Persistence baseline,587,78.535,33.997,2.31
+Poly Ridge,587,67.121,33.997,1.974
+Random Forest,587,79.557,33.997,2.34
+Ridge,587,81.772,33.997,2.405
+SVM,587,81.601,33.997,2.4

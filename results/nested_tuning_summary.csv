@@ -1,0 +1,13 @@
+model,objective,mae_mean,mae_std,ap_mean,ap_std,n_cutoffs
+Decision Tree,average_precision,1.5725,0.3772,0.2352,0.0805,5
+Decision Tree,mae,1.5406,0.3789,0.2379,0.0847,5
+KNN,average_precision,1.3999,0.3132,0.3158,0.1194,5
+KNN,mae,1.3903,0.3394,0.3327,0.1005,5
+Linear Regression,average_precision,1.7539,0.482,0.3308,0.0474,5
+Linear Regression,mae,1.7543,0.483,0.3318,0.0458,5
+Poly Ridge,average_precision,1.8048,0.515,0.3697,0.0975,5
+Poly Ridge,mae,1.8084,0.5116,0.4239,0.1347,5
+Random Forest,average_precision,1.3988,0.333,0.3989,0.1201,5
+Random Forest,mae,1.3793,0.3583,0.3812,0.1205,5
+Ridge,average_precision,1.7535,0.4792,0.3346,0.0484,5
+Ridge,mae,1.7618,0.463,0.3158,0.059,5

@@ -150,9 +150,19 @@ SEARCH_SPACES = {
         "cv": 3,
         "space": {
             "regressor__n_estimators": [100, 200],
-            "regressor__max_depth": [10, 20, None],
+            "regressor__max_depth": [20, 30, None],
             "regressor__min_samples_split": [2, 5],
             "regressor__min_samples_leaf": [1, 2],
+            "regressor__max_features": ["sqrt", "log2"],
+            "regressor__bootstrap": [True, False],
+        },
+    },
+    "Poly Ridge": {
+        "kind": "grid",
+        "cv": 3,
+        "space": {
+            "regressor__alpha": [0.1, 1.0, 10.0, 100.0],
+            "regressor__fit_intercept": [True, False],
         },
     },
     "Neural Network": {

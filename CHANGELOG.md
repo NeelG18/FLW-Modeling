@@ -6,6 +6,18 @@ All notable changes to the analysis code are recorded here.
 
 ### Fixed
 
+- Hyperparameter searches ran on a random split spanning every year while
+  evaluation held out later years, so configurations were selected with
+  the test period present in the search data. Selection now sees only
+  years at or before each cutoff, and the inner folds are time-ordered
+  expanding windows rather than random. The severity threshold used by
+  the ranking objective is likewise derived from the training window
+  alone. Effect on results is small: mean absolute error moves by at most
+  0.036 for five of six models, and improves by 0.163 for the decision
+  tree.
+- Search spaces recorded for polynomial ridge, which previously had none,
+  and extended for the random forest to include `bootstrap` and
+  `max_features`, which the configuration set without any search.
 - Persistence baseline no longer depends on row order. It selected a
   group's most recent training observation by sorting on year and taking
   the last row, but about a third of rows share their full feature tuple
@@ -82,6 +94,26 @@ All notable changes to the analysis code are recorded here.
 
 ### Added
 
+- Ranking and screening evaluation: average precision across several
+  severity thresholds, rank correlation, precision/recall/lift at k, and
+  share of observed loss captured at k against a perfect-ranking ceiling.
+  Average precision is preferred to ROC-AUC because at roughly 2%
+  prevalence the latter is dominated by easy negatives. Severity is set at
+  the top decile of observed losses rather than a round number.
+- Paired bootstrap on the difference in average precision between a model
+  and a reference, resampled within each split so class balance is
+  preserved.
+- Stage comparisons exclude the values of `food_supply_stage` that span
+  several chain positions rather than naming one. A span accumulates loss
+  across everything it covers, so including it decides the comparison by
+  construction.
+- Stage coverage reports the plausible gap alongside the naive one. Only
+  counting stages at which a commodity is measured somewhere reduces the
+  apparent gap from 24,952 combinations to 9,185.
+- Adjusted R-squared, a skill score against a reference predictor, and a
+  helper reporting the encoded width of a fitted preprocessor.
+- Nested hyperparameter selection under the walk-forward protocol, with
+  two objectives and results for both.
 - Sensitivity analysis for the excluded `cause_of_loss` feature. The
   field is profiled (coverage, distinct values, value lengths) and then
   tested four ways over repeated random splits: with and without the
