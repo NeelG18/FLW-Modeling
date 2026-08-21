@@ -31,6 +31,21 @@ All notable changes to the analysis code are recorded here.
 
 ### Changed
 
+- One-hot encoding no longer drops a category level for the distance,
+  tree, kernel, and neural models. The encoder ignores unknown categories,
+  so an unseen category encodes as all zeros -- identical to how a dropped
+  reference level encodes. The two were indistinguishable, and a country
+  absent from training was silently treated as the reference country.
+  Dropping is retained for the three least-squares models, where it
+  removes the exact collinearity between the indicator columns and the
+  intercept; those models accept the ambiguity knowingly and the reason is
+  recorded next to the policy.
+- Results regenerated under the corrected encoding. Scores for the
+  affected models fall slightly: dropping a level left reference-level
+  rows with one fewer non-zero, which pulled them toward the origin and
+  distorted nearest-neighbour distances in particular. The three
+  least-squares models are unchanged to the last digit, confirming the
+  change is scoped as intended.
 - Year ablation records configurations that cannot be fitted instead of
   aborting the run. The multi-layer perceptron does not converge with an
   unscaled `year` feature (the solver produces non-finite weights), which

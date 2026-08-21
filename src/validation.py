@@ -19,7 +19,12 @@ from sklearn.preprocessing import PolynomialFeatures
 
 from baselines import BASELINES
 from data_prep import GROUP_COLS, TARGET, RESULTS_DIR
-from pipelines import MODEL_NAMES, TUNED_PARAMS, build_pipeline, make_column_transformer
+from pipelines import (
+    MODEL_NAMES,
+    TUNED_PARAMS,
+    build_pipeline,
+    make_column_transformer_for,
+)
 
 # Walk-forward cutoffs. Each trains on <= Y and tests on > Y.
 CUTOFF_YEARS = [2016, 2017, 2018, 2019, 2020]
@@ -165,7 +170,7 @@ def walk_forward(
         for name in model_names:
             if name == "Poly Ridge":
                 est_gb, n_base, n_poly, layout = poly_ridge_memory_estimate_gb(
-                    X_train, make_column_transformer(year_mode)
+                    X_train, make_column_transformer_for(name, year_mode)
                 )
                 if est_gb > MEMORY_SAFETY_LIMIT_GB:
                     if verbose:

@@ -41,6 +41,31 @@ MODEL_NAMES = [
 ]
 
 # --------------------------------------------------------------------------
+# Categorical encoding policy
+# --------------------------------------------------------------------------
+# Which models drop the first level of each categorical variable.
+#
+# Dropping a level removes the exact linear dependence between a category's
+# indicator columns and the intercept. That matters only for the models
+# fitted by least squares, where the dependence makes the design matrix
+# singular; those are listed below.
+#
+# For every other model it is not merely unnecessary but harmful. The
+# encoder is configured with handle_unknown="ignore", so a category unseen
+# during training encodes as all zeros -- which is exactly how the dropped
+# reference level also encodes. The two become indistinguishable, and a
+# country the model has never encountered is silently treated as the
+# reference country rather than as unknown. Distance, tree, and kernel
+# models have no intercept to alias against, so they keep the full
+# indicator set and retain that distinction.
+#
+# The least-squares models below therefore accept the ambiguity knowingly:
+# an unseen category is predicted as though it were the reference level.
+# That is the cost of a non-singular design matrix, and it is bounded by
+# how often unseen categories occur at prediction time.
+DROP_FIRST_MODELS = frozenset({"Linear Regression", "Ridge", "Poly Ridge"})
+
+# --------------------------------------------------------------------------
 # Selected hyperparameters
 # --------------------------------------------------------------------------
 TUNED_PARAMS = {
@@ -157,7 +182,7 @@ SEARCH_SPACES = {
 # --------------------------------------------------------------------------
 # Preprocessing
 # --------------------------------------------------------------------------
-def make_column_transformer(year_mode="scaled"):
+def make_column_transformer(year_mode="scaled", drop_first=False):
     """Build the categorical encoder plus the chosen treatment of ``year``.
 
     Parameters
@@ -166,8 +191,14 @@ def make_column_transformer(year_mode="scaled"):
         ``'scaled'`` standardises ``year`` (fit inside the pipeline, so the
         scaler never sees the held-out fold). ``'raw'`` passes it through
         unscaled. ``'none'`` drops it, leaving a purely cross-sectional model.
+    drop_first : bool
+        Drop the first level of each categorical variable. See
+        ``DROP_FIRST_MODELS`` for when this is appropriate; prefer
+        ``make_column_transformer_for`` so the choice follows the model.
     """
-    encoder = OneHotEncoder(drop="first", handle_unknown="ignore")
+    encoder = OneHotEncoder(
+        drop="first" if drop_first else None, handle_unknown="ignore"
+    )
 
     if year_mode == "none":
         return ColumnTransformer(
@@ -188,6 +219,13 @@ def make_column_transformer(year_mode="scaled"):
             remainder="drop",
         )
     raise ValueError(f"Unknown year_mode: {year_mode!r}")
+
+
+def make_column_transformer_for(name, year_mode="scaled"):
+    """Transformer with the encoding policy this model requires."""
+    if name not in MODEL_NAMES:
+        raise ValueError(f"Unknown model: {name!r}")
+    return make_column_transformer(year_mode, drop_first=name in DROP_FIRST_MODELS)
 
 
 # --------------------------------------------------------------------------
@@ -232,7 +270,11 @@ def build_pipeline(name, year_mode="scaled", column_transformer=None):
     if name not in MODEL_NAMES:
         raise ValueError(f"Unknown model: {name!r}")
 
-    ct = column_transformer if column_transformer is not None else make_column_transformer(year_mode)
+    ct = (
+        column_transformer
+        if column_transformer is not None
+        else make_column_transformer_for(name, year_mode)
+    )
     steps = [("preprocessor", ct)]
 
     if name == "Poly Ridge":
