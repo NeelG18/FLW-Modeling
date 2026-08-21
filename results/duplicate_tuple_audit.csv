@@ -1,0 +1,2 @@
+n_rows,n_distinct_tuples,n_rows_sharing_a_tuple,pct_rows_sharing_a_tuple,largest_tuple_group,n_distinct_groups,n_test_rows,n_test_rows_seen_in_train,pct_test_rows_seen_in_train
+26970,18391,8579,31.81,73,3121,5394,2387,44.25

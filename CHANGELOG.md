@@ -6,6 +6,13 @@ All notable changes to the analysis code are recorded here.
 
 ### Fixed
 
+- Persistence baseline no longer depends on row order. It selected a
+  group's most recent training observation by sorting on year and taking
+  the last row, but about a third of rows share their full feature tuple
+  with another row, so a group's latest year commonly holds several
+  observations and the sort picked an arbitrary member of the tie. It now
+  averages across every observation at the group's latest training year.
+  The baseline scores substantially better as a result.
 - Polynomial ridge memory guard sized the degree-3 expansion as a dense
   array, estimating 1,379-1,797 GB and skipping the model at every
   validation cutoff. The encoded matrix is sparse with about four
@@ -64,6 +71,15 @@ All notable changes to the analysis code are recorded here.
 
 ### Added
 
+- Duplicate feature-tuple audit reporting the repeat rate, the largest
+  repeated group, and the share of test rows whose exact feature tuple
+  also appears in training under the random split.
+- Experiment scoring a random split before and after collapsing repeated
+  tuples, and a partition of the test set by whether each row's tuple was
+  present in training. Together these test whether repeated tuples let a
+  model recall training targets across a random split. They do not:
+  already-seen rows carry higher error, because repeated tuples hold
+  conflicting targets and so act as a noise floor rather than a shortcut.
 - Repository structure: `src/` package holding the analysis modules,
   `data/` for the UN FLW extract, `results/` and `figures/` for generated
   output, and `notebooks/` for orchestration.

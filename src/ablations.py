@@ -8,6 +8,7 @@ experiments that justify the configuration choices in ``pipelines.py``.
 import time
 import warnings
 
+import numpy as np
 import pandas as pd
 from sklearn.model_selection import GridSearchCV, RandomizedSearchCV, train_test_split
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
@@ -173,3 +174,129 @@ def save_table(df, filename):
     path = RESULTS_DIR / filename
     df.to_csv(path, index=False)
     return path
+
+
+# --------------------------------------------------------------------------
+# Duplicate-tuple audit
+# --------------------------------------------------------------------------
+# The models see exactly four features. Any two rows agreeing on all four are
+# indistinguishable to them, so when a random split puts one in training and
+# its twin in test, the "prediction" is partly recall. The audit below
+# measures how much of the random-split score rests on that.
+FEATURE_TUPLE = GROUP_COLS + ["year"]
+
+
+def duplicate_tuple_audit(df, seed=RANDOM_SPLIT_SEED):
+    """Quantify repeated feature tuples and how many survive a random split.
+
+    Returns a one-row frame: the duplicate rate in the data, and the share
+    of test rows whose exact feature tuple also appears in training.
+    """
+    counts = df.groupby(FEATURE_TUPLE, sort=False).size()
+    duplicated_rows = int((counts[counts > 1]).sum() - (counts > 1).sum())
+
+    X_train, X_test, _, _ = make_random_split(df, include_year=True, seed=seed)
+    train_tuples = set(map(tuple, X_train[FEATURE_TUPLE].to_numpy()))
+    test_tuples = list(map(tuple, X_test[FEATURE_TUPLE].to_numpy()))
+    seen_in_train = sum(1 for t in test_tuples if t in train_tuples)
+
+    return pd.DataFrame([{
+        "n_rows": len(df),
+        "n_distinct_tuples": int(counts.size),
+        "n_rows_sharing_a_tuple": duplicated_rows,
+        "pct_rows_sharing_a_tuple": round(100 * duplicated_rows / len(df), 2),
+        "largest_tuple_group": int(counts.max()),
+        "n_distinct_groups": int(df.groupby(GROUP_COLS, sort=False).ngroups),
+        "n_test_rows": len(test_tuples),
+        "n_test_rows_seen_in_train": seen_in_train,
+        "pct_test_rows_seen_in_train": round(100 * seen_in_train / len(test_tuples), 2),
+    }])
+
+
+def deduplicate_tuples(df):
+    """Collapse rows sharing a feature tuple, averaging the target.
+
+    Averaging rather than dropping keeps every observation's contribution;
+    what changes is that a tuple can no longer appear on both sides of a
+    split.
+    """
+    return (
+        df.groupby(FEATURE_TUPLE, as_index=False, sort=False)[TARGET]
+        .mean()
+    )
+
+
+def duplicate_removal_experiment(df, model_names=None, seed=RANDOM_SPLIT_SEED, verbose=True):
+    """Score a random split before and after collapsing duplicate tuples.
+
+    Collapsing raises the scores rather than lowering them: averaging the
+    conflicting targets of a repeated tuple removes noise the model could
+    never have fitted. See ``seen_vs_unseen_tuples`` for the test that
+    separates that effect from memorisation.
+    """
+    model_names = model_names or ["Random Forest", "KNN", "Decision Tree", "Ridge"]
+    deduped = deduplicate_tuples(df)
+
+    rows = []
+    for label, frame in (("with duplicates", df), ("deduplicated", deduped)):
+        X_train, X_test, y_train, y_test = make_random_split(
+            frame, include_year=True, seed=seed
+        )
+        for name in model_names:
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore")
+                pipe = build_pipeline(name, year_mode="scaled")
+                pipe.fit(X_train, y_train)
+                metrics = _score_both_sides(pipe, X_train, X_test, y_train, y_test)
+            rows.append(dict(dataset=label, model=name, n_rows=len(frame), **metrics))
+            if verbose:
+                print(f"  {label:<16}{name:<18}test_r2={metrics['test_r2']:.4f}")
+
+    out = pd.DataFrame(rows)
+    wide = out.pivot(index="model", columns="dataset", values="test_r2")
+    wide["inflation"] = (wide["with duplicates"] - wide["deduplicated"]).round(4)
+    return out, wide
+
+
+def seen_vs_unseen_tuples(df, model_names=None, seed=RANDOM_SPLIT_SEED, verbose=True):
+    """Score test rows by whether their feature tuple appeared in training.
+
+    This is the direct test for memorisation across a random split. If
+    repeated tuples let a model recall training targets, the rows whose
+    tuple it has already seen should be the easy ones. Holding the fit and
+    the split fixed and partitioning only the test set keeps everything
+    else constant.
+
+    Reports MSE as well as R-squared: the two subsets have different target
+    variances, so R-squared alone does not compare them cleanly.
+    """
+    model_names = model_names or ["Random Forest", "KNN", "Decision Tree", "Ridge"]
+    X_train, X_test, y_train, y_test = make_random_split(df, include_year=True, seed=seed)
+
+    train_tuples = set(map(tuple, X_train[FEATURE_TUPLE].to_numpy()))
+    seen = np.array([tuple(r) in train_tuples for r in X_test[FEATURE_TUPLE].to_numpy()])
+
+    rows = []
+    for name in model_names:
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            pipe = build_pipeline(name, year_mode="scaled")
+            pipe.fit(X_train, y_train)
+            preds = pipe.predict(X_test)
+
+        rows.append({
+            "model": name,
+            "n_seen": int(seen.sum()),
+            "n_unseen": int((~seen).sum()),
+            "mse_seen": mean_squared_error(y_test[seen], preds[seen]),
+            "mse_unseen": mean_squared_error(y_test[~seen], preds[~seen]),
+            "r2_seen": r2_score(y_test[seen], preds[seen]),
+            "r2_unseen": r2_score(y_test[~seen], preds[~seen]),
+            "target_var_seen": float(y_test[seen].var()),
+            "target_var_unseen": float(y_test[~seen].var()),
+        })
+        if verbose:
+            r = rows[-1]
+            print(f"  {name:<18}MSE seen={r['mse_seen']:.4f}  unseen={r['mse_unseen']:.4f}")
+
+    return pd.DataFrame(rows)

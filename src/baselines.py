@@ -27,10 +27,17 @@ def persistence_baseline(train_df, test_df):
         ``fallback_rate`` is the share of test rows whose group never
         appeared in training and therefore received the global mean.
     """
+    # Take the group's most recent training year, then average across every
+    # row recorded for it. Roughly a third of rows share their full feature
+    # tuple with another row, so a group's latest year commonly holds
+    # several observations; sorting and taking the last one would pick an
+    # arbitrary member of that tie and make the baseline depend on row
+    # order rather than on the data.
+    latest_year = train_df.groupby(GROUP_COLS, as_index=False)["year"].max()
     last_obs = (
-        train_df.sort_values("year")
-        .groupby(GROUP_COLS, as_index=False)
-        .tail(1)[GROUP_COLS + [TARGET]]
+        train_df.merge(latest_year, on=GROUP_COLS + ["year"], how="inner")
+        .groupby(GROUP_COLS, as_index=False)[TARGET]
+        .mean()
         .rename(columns={TARGET: "pred"})
     )
 
