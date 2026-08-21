@@ -6,6 +6,17 @@ All notable changes to the analysis code are recorded here.
 
 ### Fixed
 
+- Polynomial ridge memory guard sized the degree-3 expansion as a dense
+  array, estimating 1,379-1,797 GB and skipping the model at every
+  validation cutoff. The encoded matrix is sparse with about four
+  non-zeros per row, so the expansion holds about thirty-four non-zeros
+  per row and costs roughly 9 MB. The guard now measures the non-zero
+  rate on a sample and extrapolates from it, and reports which layout it
+  costed. Polynomial ridge fits all five cutoffs in about two seconds and
+  is restored to the results table.
+- Validation summary counted attempted cutoffs rather than scored runs,
+  so a model skipped at every cutoff still reported a full count beside
+  empty metrics.
 - Notebook no longer references pipeline variables that were never
   defined. `neural_pipeline` and `dtpipeline` are now built and fitted
   through `pipelines.build_pipeline`, so the notebook runs from a clean

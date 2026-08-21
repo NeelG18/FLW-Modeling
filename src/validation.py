@@ -13,6 +13,7 @@ import warnings
 
 import numpy as np
 import pandas as pd
+from scipy import sparse
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 from sklearn.preprocessing import PolynomialFeatures
 
@@ -27,22 +28,45 @@ CUTOFF_YEARS = [2016, 2017, 2018, 2019, 2020]
 MEMORY_SAFETY_LIMIT_GB = 8
 
 
-def poly_ridge_memory_estimate_gb(X_train, ct):
-    """Estimate the memory the degree-3 expansion would need.
+def poly_ridge_memory_estimate_gb(X_train, ct, sample_rows=500):
+    """Estimate the memory the degree-3 expansion actually needs.
 
-    Returns ``(estimated_gb, n_base_features, n_poly_features)``.
+    The nominal output width is enormous -- roughly eight million columns
+    from ~360 one-hot inputs -- but the encoded matrix is sparse, with only
+    about four non-zeros per row (three categorical selections plus year).
+    A degree-3 expansion of four non-zeros yields about thirty-four
+    non-zeros, so the real cost scales with the non-zero count and not with
+    the nominal width. Sizing this as a dense array overstates it by five
+    orders of magnitude and would skip a model that fits in megabytes.
+
+    The non-zero rate is measured on a sample and extrapolated, rather than
+    assumed, so the estimate stays correct if the encoding changes.
+
+    Returns ``(estimated_gb, n_base_features, n_poly_features, layout)``
+    where ``layout`` is ``"sparse"`` or ``"dense"``.
     """
     ct_fitted = ct.fit(X_train)
     X_encoded = ct_fitted.transform(X_train)
     n_base = X_encoded.shape[1]
+    n_rows = X_train.shape[0]
+    degree = TUNED_PARAMS["Poly Ridge"]["poly_degree"]
+    poly_check = PolynomialFeatures(degree=degree, include_bias=False)
 
-    poly_check = PolynomialFeatures(
-        degree=TUNED_PARAMS["Poly Ridge"]["poly_degree"], include_bias=False
-    )
+    if sparse.issparse(X_encoded):
+        sample = X_encoded[: min(sample_rows, n_rows)]
+        expanded = poly_check.fit_transform(sample)
+        n_poly = poly_check.n_output_features_
+
+        if sparse.issparse(expanded):
+            nnz_per_row = expanded.nnz / sample.shape[0]
+            index_bytes = expanded.indices.itemsize
+            # CSR: one float64 value and one index per non-zero, plus the
+            # row pointer array.
+            total_bytes = n_rows * nnz_per_row * (8 + index_bytes) + (n_rows + 1) * 8
+            return total_bytes / 1e9, n_base, n_poly, "sparse"
+
     n_poly = poly_check.fit(X_encoded[:5]).n_output_features_
-
-    estimated_gb = (X_train.shape[0] * n_poly * 8) / 1e9
-    return estimated_gb, n_base, n_poly
+    return (n_rows * n_poly * 8) / 1e9, n_base, n_poly, "dense"
 
 
 def score(y_true, y_pred):
@@ -140,15 +164,16 @@ def walk_forward(
         # --- Models ---
         for name in model_names:
             if name == "Poly Ridge":
-                est_gb, n_base, n_poly = poly_ridge_memory_estimate_gb(
+                est_gb, n_base, n_poly, layout = poly_ridge_memory_estimate_gb(
                     X_train, make_column_transformer(year_mode)
                 )
                 if est_gb > MEMORY_SAFETY_LIMIT_GB:
                     if verbose:
                         print(
-                            f"  {name:<22}: SKIPPED — estimated {est_gb:,.0f} GB "
-                            f"({n_poly:,} degree-3 features from {n_base} base "
-                            f"features) exceeds {MEMORY_SAFETY_LIMIT_GB} GB limit."
+                            f"  {name:<22}: SKIPPED — estimated {est_gb:,.1f} GB "
+                            f"({n_poly:,} degree-{TUNED_PARAMS['Poly Ridge']['poly_degree']} "
+                            f"features from {n_base} base features, {layout} layout) "
+                            f"exceeds {MEMORY_SAFETY_LIMIT_GB} GB limit."
                         )
                     results.append(
                         dict(
@@ -215,7 +240,10 @@ def summarise(results_df):
             mae_std=("mae", "std"),
             r2_mean=("r2", "mean"),
             r2_std=("r2", "std"),
-            n_cutoffs=("cutoff", "count"),
+            # Count scored runs, not attempted cutoffs: a model that was
+            # skipped at every cutoff would otherwise report a full count
+            # alongside empty metrics.
+            n_cutoffs=("r2", "count"),
         )
         .round(4)
         .sort_values("r2_mean", ascending=False)
