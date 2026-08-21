@@ -1,0 +1,19 @@
+model,metric,n_splits,n_splits_better,n_splits_worse,mean_difference,worst_p,verdict
+Decision Tree,absolute_error,5,5,0,-1.05705,0.0,beats baseline at every split
+Decision Tree,squared_error,5,4,0,-4.871831,0.0,mixed
+KNN,absolute_error,5,5,0,-1.23327,0.0,beats baseline at every split
+KNN,squared_error,5,5,0,-13.170594,0.0,beats baseline at every split
+Linear Regression,absolute_error,5,4,0,-0.749837,0.0,mixed
+Linear Regression,squared_error,5,4,1,-6.052043,0.0,mixed
+Linear trend baseline,absolute_error,5,1,0,-0.000646,0.843597,mixed
+Linear trend baseline,squared_error,5,2,1,-0.005402,0.547,mixed
+Neural Network,absolute_error,5,5,0,-1.257577,0.0,beats baseline at every split
+Neural Network,squared_error,5,5,0,-13.821657,0.0,beats baseline at every split
+Poly Ridge,absolute_error,5,5,0,-0.781273,0.0,beats baseline at every split
+Poly Ridge,squared_error,5,5,0,-13.306079,0.0,beats baseline at every split
+Random Forest,absolute_error,5,5,0,-1.177984,0.0,beats baseline at every split
+Random Forest,squared_error,5,5,0,-15.71138,0.0,beats baseline at every split
+Ridge,absolute_error,5,5,0,-0.822854,0.0,beats baseline at every split
+Ridge,squared_error,5,4,0,-8.061194,0.0,mixed
+SVM,absolute_error,5,5,0,-1.133421,0.0,beats baseline at every split
+SVM,squared_error,5,5,0,-14.412778,0.0,beats baseline at every split

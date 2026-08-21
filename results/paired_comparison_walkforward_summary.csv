@@ -1,0 +1,19 @@
+model,metric,n_splits,n_splits_better,n_splits_worse,mean_difference,worst_p,verdict
+Decision Tree,absolute_error,5,0,5,0.361218,0.0,worse at every split
+Decision Tree,squared_error,5,0,3,5.808528,0.0,mixed
+KNN,absolute_error,5,0,2,0.050758,0.000272,mixed
+KNN,squared_error,5,2,0,-1.475941,0.000189,mixed
+Linear Regression,absolute_error,5,0,5,0.410291,0.0,worse at every split
+Linear Regression,squared_error,5,1,0,-0.557793,0.0,mixed
+Linear trend baseline,absolute_error,5,0,5,0.56281,0.0,worse at every split
+Linear trend baseline,squared_error,5,0,5,45.86105,0.0,worse at every split
+Neural Network,absolute_error,5,0,4,0.543497,0.0,mixed
+Neural Network,squared_error,5,2,1,-0.159908,0.0,mixed
+Poly Ridge,absolute_error,5,0,5,0.426751,0.0,worse at every split
+Poly Ridge,squared_error,5,2,0,-1.444337,0.0,mixed
+Random Forest,absolute_error,5,0,2,0.044924,0.0,mixed
+Random Forest,squared_error,5,4,0,-2.413968,0.0,mixed
+Ridge,absolute_error,5,0,5,0.415081,0.0,worse at every split
+Ridge,squared_error,5,1,0,-0.646944,0.0,mixed
+SVM,absolute_error,5,1,1,-0.001237,2.4e-05,mixed
+SVM,squared_error,5,2,0,-1.74552,0.000529,mixed

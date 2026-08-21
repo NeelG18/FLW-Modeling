@@ -71,6 +71,16 @@ All notable changes to the analysis code are recorded here.
 
 ### Added
 
+- Paired significance tests comparing every model against the baseline
+  within each split, on both squared and absolute error. Reporting a mean
+  and standard deviation across folds conflates model differences with
+  fold difficulty, and the second dominates here: the baseline's mean
+  squared error ranges from about 22 at the earliest cutoff to about 8 at
+  the latest. Scoring both predictors on identical rows and taking the
+  per-row difference cancels that. Reported as a percentile bootstrap
+  interval over 10,000 resamples plus a Wilcoxon signed-rank test, and a
+  model is credited only where the whole interval falls below zero at
+  every split.
 - Grouped cross-validation holding out whole country-commodity pairs,
   reported alongside the walk-forward split. The two answer different
   questions: whether a model reaches a later year, and whether it reaches
