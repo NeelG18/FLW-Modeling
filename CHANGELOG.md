@@ -38,6 +38,17 @@ All notable changes to the analysis code are recorded here.
 
 ### Changed
 
+- Comparison plotting consolidated into a single function taking the
+  dimension to vary as an argument, with the remaining two held fixed. The
+  previous per-dimension functions duplicated the same logic, which is why
+  an earlier fix had to be applied in more than one place. The
+  consolidated form also supports varying by country, which none of the
+  originals did.
+- Flagship model for the prediction and visualization section changed from
+  the decision tree to the random forest. The random forest leads on
+  unseen years (0.356), on unseen country-commodity pairs (0.389), and on
+  the random split (0.645); the decision tree scores -0.084 on unseen
+  years, below a constant predictor and below the persistence baseline.
 - One-hot encoding no longer drops a category level for the distance,
   tree, kernel, and neural models. The encoder ignores unknown categories,
   so an unseen category encodes as all zeros -- identical to how a dropped
@@ -71,6 +82,12 @@ All notable changes to the analysis code are recorded here.
 
 ### Added
 
+- Residual diagnostics computed from held-out predictions: predicted
+  against actual with the identity line, residuals against fitted values,
+  error broken down by country or commodity, and error broken down by the
+  size of the observed loss.
+- Per-row predictions now carry country, commodity, and supply stage, so
+  error can be attributed to a group without refitting.
 - Random forest ablation over `bootstrap`, `max_features`, and
   `max_depth`, scored on the walk-forward split rather than a random one.
   These three settings were fixed in the configuration without appearing

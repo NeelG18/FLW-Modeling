@@ -74,6 +74,21 @@ def poly_ridge_memory_estimate_gb(X_train, ct, sample_rows=500):
     return (n_rows * n_poly * 8) / 1e9, n_base, n_poly, "dense"
 
 
+def _prediction_frame(test_df, y_true, y_pred, **split_keys):
+    """Per-row predictions carrying the identifiers residuals get grouped by.
+
+    Keeping country, commodity, and stage alongside each prediction is what
+    lets error be reported per region or per commodity later without
+    refitting anything.
+    """
+    frame = test_df[GROUP_COLS + ["year"]].reset_index(drop=True).copy()
+    for key, value in split_keys.items():
+        frame[key] = value
+    frame["y_true"] = np.asarray(y_true)
+    frame["y_pred"] = np.asarray(y_pred)
+    return frame
+
+
 def score(y_true, y_pred):
     """Return the metric triple reported for every model and baseline."""
     return {
@@ -149,15 +164,7 @@ def walk_forward(
                 )
             )
             predictions.append(
-                pd.DataFrame(
-                    dict(
-                        cutoff=cutoff,
-                        model=base_name,
-                        y_true=y_test.to_numpy(),
-                        y_pred=np.asarray(preds),
-                        year=test_df["year"].to_numpy(),
-                    )
-                )
+                _prediction_frame(test_df, y_test, preds, cutoff=cutoff, model=base_name)
             )
             if verbose:
                 print(
@@ -212,15 +219,7 @@ def walk_forward(
                 )
             )
             predictions.append(
-                pd.DataFrame(
-                    dict(
-                        cutoff=cutoff,
-                        model=name,
-                        y_true=y_test.to_numpy(),
-                        y_pred=np.asarray(preds),
-                        year=test_df["year"].to_numpy(),
-                    )
-                )
+                _prediction_frame(test_df, y_test, preds, cutoff=cutoff, model=name)
             )
             if verbose:
                 print(
@@ -322,8 +321,7 @@ def grouped_cv(df, n_splits=5, model_names=None, year_mode="scaled", verbose=Tru
                      fallback_rate=fallback_rate, fitted=True, **metrics)
             )
             predictions.append(
-                pd.DataFrame(dict(fold=fold, model=base_name, y_true=y_test.to_numpy(),
-                                  y_pred=np.asarray(preds), year=test_df["year"].to_numpy()))
+                _prediction_frame(test_df, y_test, preds, fold=fold, model=base_name)
             )
             if verbose:
                 print(
@@ -344,8 +342,7 @@ def grouped_cv(df, n_splits=5, model_names=None, year_mode="scaled", verbose=Tru
                      fallback_rate=np.nan, fitted=True, **metrics)
             )
             predictions.append(
-                pd.DataFrame(dict(fold=fold, model=name, y_true=y_test.to_numpy(),
-                                  y_pred=np.asarray(preds), year=test_df["year"].to_numpy()))
+                _prediction_frame(test_df, y_test, preds, fold=fold, model=name)
             )
             if verbose:
                 print(
