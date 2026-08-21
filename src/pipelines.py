@@ -231,8 +231,10 @@ def make_column_transformer_for(name, year_mode="scaled"):
 # --------------------------------------------------------------------------
 # Estimators
 # --------------------------------------------------------------------------
-def _make_regressor(name):
+def _make_regressor(name, param_overrides=None):
     params = dict(TUNED_PARAMS[name])
+    if param_overrides:
+        params.update(param_overrides)
 
     if name == "KNN":
         return neighbors.KNeighborsRegressor(**params)
@@ -254,7 +256,7 @@ def _make_regressor(name):
     raise ValueError(f"Unknown model: {name!r}")
 
 
-def build_pipeline(name, year_mode="scaled", column_transformer=None):
+def build_pipeline(name, year_mode="scaled", column_transformer=None, param_overrides=None):
     """Build the full preprocessing + estimator pipeline for one model.
 
     Parameters
@@ -266,6 +268,10 @@ def build_pipeline(name, year_mode="scaled", column_transformer=None):
     column_transformer : ColumnTransformer, optional
         Use a pre-built transformer instead. Callers that need to inspect the
         encoded matrix before fitting supply the transformer they inspected.
+    param_overrides : dict, optional
+        Replace individual tuned hyperparameters. Intended for ablations
+        that sweep one setting; the tuned values remain the default so a
+        sweep cannot quietly become the configuration used elsewhere.
     """
     if name not in MODEL_NAMES:
         raise ValueError(f"Unknown model: {name!r}")
@@ -288,5 +294,5 @@ def build_pipeline(name, year_mode="scaled", column_transformer=None):
             )
         )
 
-    steps.append(("regressor", _make_regressor(name)))
+    steps.append(("regressor", _make_regressor(name, param_overrides)))
     return Pipeline(steps)

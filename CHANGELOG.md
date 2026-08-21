@@ -71,6 +71,14 @@ All notable changes to the analysis code are recorded here.
 
 ### Added
 
+- Random forest ablation over `bootstrap`, `max_features`, and
+  `max_depth`, scored on the walk-forward split rather than a random one.
+  These three settings were fixed in the configuration without appearing
+  in any search. All 32 combinations are now recorded.
+- Comparison of free-text commodity labels against standardised CPC
+  codes, run through the identical walk-forward protocol so the encoding
+  is the only difference, plus a count of the categories that free text
+  splits and the code does not.
 - Paired significance tests comparing every model against the baseline
   within each split, on both squared and absolute error. Reporting a mean
   and standard deviation across folds conflates model differences with

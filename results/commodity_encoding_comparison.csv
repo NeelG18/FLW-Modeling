@@ -1,0 +1,21 @@
+model,mse_mean,mse_std,mae_mean,mae_std,r2_mean,r2_std,n_cutoffs,encoding
+Random Forest,12.0124,5.8612,1.387,0.3581,0.3555,0.0721,5,commodity label
+SVM,12.6809,6.4985,1.3408,0.3811,0.329,0.0425,5,commodity label
+Poly Ridge,12.9821,6.402,1.7688,0.4616,0.2982,0.1223,5,commodity label
+KNN,12.9505,5.6865,1.3928,0.3482,0.2941,0.0619,5,commodity label
+Ridge,13.7795,7.5871,1.7571,0.4753,0.2815,0.0467,5,commodity label
+Linear Regression,13.8686,7.6751,1.7523,0.4797,0.2791,0.0408,5,commodity label
+Neural Network,14.2665,8.617,1.8855,0.934,0.275,0.0738,5,commodity label
+Persistence baseline,14.4264,6.2758,1.3421,0.3191,0.2137,0.0825,5,commodity label
+Decision Tree,20.2349,9.867,1.7033,0.4876,-0.0836,0.1002,5,commodity label
+Linear trend baseline,60.2875,36.3884,1.9049,0.4908,-2.2189,1.7442,5,commodity label
+Random Forest,11.9535,6.0429,1.3832,0.3671,0.3634,0.0797,5,cpc code
+SVM,12.7055,6.4743,1.3418,0.3791,0.3266,0.0439,5,cpc code
+Poly Ridge,12.9083,6.3516,1.7673,0.4578,0.3027,0.1183,5,cpc code
+Neural Network,13.1494,6.491,1.6282,0.5091,0.2992,0.0511,5,cpc code
+KNN,13.0771,5.8327,1.3955,0.3511,0.2892,0.0573,5,cpc code
+Ridge,13.7745,7.6238,1.7576,0.4787,0.2834,0.0434,5,cpc code
+Linear Regression,13.8819,7.6701,1.7583,0.4797,0.2777,0.0422,5,cpc code
+Persistence baseline,14.4264,6.2758,1.3421,0.3191,0.2137,0.0825,5,cpc code
+Decision Tree,20.1644,9.2885,1.7053,0.4568,-0.0984,0.1593,5,cpc code
+Linear trend baseline,60.2875,36.3884,1.9049,0.4908,-2.2189,1.7442,5,cpc code

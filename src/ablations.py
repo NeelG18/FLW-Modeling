@@ -300,3 +300,110 @@ def seen_vs_unseen_tuples(df, model_names=None, seed=RANDOM_SPLIT_SEED, verbose=
             print(f"  {name:<18}MSE seen={r['mse_seen']:.4f}  unseen={r['mse_unseen']:.4f}")
 
     return pd.DataFrame(rows)
+
+
+# --------------------------------------------------------------------------
+# Random forest hyperparameter ablation
+# --------------------------------------------------------------------------
+RF_ABLATION_GRID = {
+    "bootstrap": [True, False],
+    "max_features": ["sqrt", "log2", 0.5, None],
+    "max_depth": [10, 20, 30, None],
+}
+
+
+def random_forest_ablation(df, grid=None, cutoff_years=None, verbose=True):
+    """Sweep the random forest settings that were previously fixed by assertion.
+
+    ``bootstrap`` and ``max_features`` were never part of any search, yet the
+    configuration in use sets them to non-default values. This sweeps all
+    three against the walk-forward split rather than a random one, so a
+    setting cannot be chosen on the strength of interpolation it will not
+    get to do in practice.
+
+    Scored across cutoffs and reported as a mean, so one favourable year
+    cannot carry a setting.
+    """
+    from validation import CUTOFF_YEARS, walk_forward
+
+    grid = grid or RF_ABLATION_GRID
+    cutoff_years = cutoff_years or CUTOFF_YEARS
+
+    combos = [
+        {"bootstrap": b, "max_features": mf, "max_depth": md}
+        for b in grid["bootstrap"]
+        for mf in grid["max_features"]
+        for md in grid["max_depth"]
+    ]
+
+    rows = []
+    for i, overrides in enumerate(combos, start=1):
+        per_cutoff = []
+        for cutoff in cutoff_years:
+            train_df = df[df["year"] <= cutoff]
+            test_df = df[df["year"] > cutoff]
+            if train_df.empty or test_df.empty:
+                continue
+
+            X_train = train_df[GROUP_COLS + ["year"]]
+            X_test = test_df[GROUP_COLS + ["year"]]
+
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore")
+                pipe = build_pipeline(
+                    "Random Forest", year_mode="scaled", param_overrides=overrides
+                )
+                pipe.fit(X_train, train_df[TARGET])
+                preds = pipe.predict(X_test)
+
+            per_cutoff.append({
+                "mse": mean_squared_error(test_df[TARGET], preds),
+                "mae": mean_absolute_error(test_df[TARGET], preds),
+                "r2": r2_score(test_df[TARGET], preds),
+            })
+
+        scores = pd.DataFrame(per_cutoff)
+        rows.append({
+            **{k: ("None" if v is None else v) for k, v in overrides.items()},
+            "mse_mean": scores["mse"].mean(),
+            "mae_mean": scores["mae"].mean(),
+            "r2_mean": scores["r2"].mean(),
+            "r2_std": scores["r2"].std(),
+            "n_cutoffs": len(scores),
+        })
+        if verbose:
+            r = rows[-1]
+            print(f"  [{i}/{len(combos)}] bootstrap={r['bootstrap']!s:<6} "
+                  f"max_features={r['max_features']!s:<6} max_depth={r['max_depth']!s:<5} "
+                  f"r2={r['r2_mean']:.4f}")
+
+    return pd.DataFrame(rows).sort_values("r2_mean", ascending=False).reset_index(drop=True)
+
+
+# --------------------------------------------------------------------------
+# Commodity encoding comparison
+# --------------------------------------------------------------------------
+def commodity_encoding_comparison(df, model_names=None, verbose=True):
+    """Compare free-text commodity labels against standardised CPC codes.
+
+    Both encodings are run through the identical walk-forward protocol, so
+    the only difference is which column supplies the commodity category.
+    """
+    from data_prep import with_cpc_labels
+    from validation import walk_forward, summarise
+
+    model_names = model_names or MODEL_NAMES
+
+    frames = {}
+    for label, frame in (("commodity label", df), ("cpc code", with_cpc_labels(df))):
+        if verbose:
+            print(f"--- {label} ---")
+        results, _ = walk_forward(frame, model_names=model_names, verbose=False)
+        summary = summarise(results).reset_index()
+        summary["encoding"] = label
+        frames[label] = summary
+
+    combined = pd.concat(frames.values(), ignore_index=True)
+    wide = combined.pivot(index="model", columns="encoding", values="r2_mean")
+    wide["cpc_advantage"] = (wide["cpc code"] - wide["commodity label"]).round(4)
+    return combined, wide.sort_values("cpc_advantage", ascending=False)

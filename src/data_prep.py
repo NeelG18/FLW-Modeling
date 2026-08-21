@@ -89,3 +89,29 @@ def split_features_target(df, include_year=True):
     """Split a frame into the model matrix and the target vector."""
     cols = FEATURES if include_year else GROUP_COLS
     return df[cols], df[TARGET]
+
+
+def with_cpc_labels(df):
+    """Return the frame with commodity names replaced by their CPC codes.
+
+    The models take ``commodity`` as a categorical feature, so swapping the
+    column contents is enough to re-run any experiment against the
+    standardised code instead of the free-text label. Free text fragments
+    categories that the code treats as one: "Rice, Milled" and "Rice,
+    milled" are distinct labels sharing a single CPC code.
+    """
+    out = df.copy()
+    out["commodity"] = out["cpc_code"].astype(str)
+    return out
+
+
+def commodity_label_fragmentation(df):
+    """Count categories that free-text labels split but CPC codes do not."""
+    names_per_code = df.groupby("cpc_code")["commodity"].nunique()
+    split_codes = names_per_code[names_per_code > 1]
+    return {
+        "n_commodity_labels": int(df["commodity"].nunique()),
+        "n_cpc_codes": int(df["cpc_code"].nunique()),
+        "n_codes_with_multiple_labels": int(split_codes.size),
+        "n_excess_labels": int((split_codes - 1).sum()),
+    }
