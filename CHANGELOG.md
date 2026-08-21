@@ -82,6 +82,18 @@ All notable changes to the analysis code are recorded here.
 
 ### Added
 
+- Sensitivity analysis for the excluded `cause_of_loss` feature. The
+  field is profiled (coverage, distinct values, value lengths) and then
+  tested four ways over repeated random splits: with and without the
+  feature, on all rows with missing values filled as an explicit Unknown
+  level, and on the subset where the field is actually recorded. Including
+  it changes the full-data score by about 0.002, and the apparent gain on
+  the recorded subset sits inside the run-to-run standard deviation.
+- Country representation summary and an inverse-frequency weighting
+  analysis, scored separately for sparsely observed and well represented
+  countries under the walk-forward split. Weighting degrades mean absolute
+  error for every model tested, including for the sparse countries it is
+  intended to help.
 - Residual diagnostics computed from held-out predictions: predicted
   against actual with the identity line, residuals against fitted values,
   error broken down by country or commodity, and error broken down by the

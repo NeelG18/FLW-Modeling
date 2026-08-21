@@ -14,7 +14,10 @@ from sklearn.model_selection import GridSearchCV, RandomizedSearchCV, train_test
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 
 from data_prep import GROUP_COLS, TARGET, RESULTS_DIR
-from pipelines import MODEL_NAMES, SEARCH_SPACES, build_pipeline
+from sklearn.compose import ColumnTransformer
+from sklearn.preprocessing import OneHotEncoder, StandardScaler
+
+from pipelines import MODEL_NAMES, SEARCH_SPACES, DROP_FIRST_MODELS, build_pipeline
 
 RANDOM_SPLIT_SEED = 42
 TEST_SIZE = 0.20
@@ -407,3 +410,204 @@ def commodity_encoding_comparison(df, model_names=None, verbose=True):
     wide = combined.pivot(index="model", columns="encoding", values="r2_mean")
     wide["cpc_advantage"] = (wide["cpc code"] - wide["commodity label"]).round(4)
     return combined, wide.sort_values("cpc_advantage", ascending=False)
+
+
+# --------------------------------------------------------------------------
+# Low-coverage feature sensitivity
+# --------------------------------------------------------------------------
+def cause_of_loss_profile(df):
+    """Describe why cause_of_loss is or is not usable as a feature.
+
+    Coverage alone does not settle the question -- a sparse but well-coded
+    field could be imputed. Cardinality does settle it: a field with almost
+    as many distinct values as observations has no vocabulary to impute
+    toward.
+    """
+    observed = df["cause_of_loss"].dropna()
+    counts = observed.value_counts()
+    return pd.DataFrame([{
+        "n_rows_total": len(df),
+        "n_rows_with_value": int(len(observed)),
+        "pct_coverage": round(100 * len(observed) / len(df), 2),
+        "n_distinct_values": int(counts.size),
+        "mean_rows_per_value": round(len(observed) / counts.size, 2),
+        "n_values_occurring_once": int((counts == 1).sum()),
+        "pct_values_occurring_once": round(100 * (counts == 1).sum() / counts.size, 1),
+        "median_value_length_chars": int(observed.str.len().median()),
+        "max_value_length_chars": int(observed.str.len().max()),
+    }])
+
+
+def cause_of_loss_sensitivity(df, model_names=None, seeds=(0, 1, 2, 3, 4), verbose=True):
+    """Test whether including cause_of_loss changes anything.
+
+    Four variants, each over repeated random splits:
+
+    ``full without`` / ``full with``
+        All rows. The "with" variant fills missing values with an explicit
+        Unknown level, which is the imputation an exclusion decision has to
+        be defended against.
+    ``observed without`` / ``observed with``
+        Only rows where the field is present. This is the informative
+        contrast: if the field carries usable signal at all, it shows here,
+        on the rows that actually have it.
+
+    Repeated splits rather than one, because the observed subset is small
+    enough that a single split would be noise.
+    """
+    model_names = model_names or ["Random Forest", "Ridge"]
+    observed_only = df[df["cause_of_loss"].notna()]
+
+    variants = {
+        "full without": (df, False),
+        "full with": (df, True),
+        "observed without": (observed_only, False),
+        "observed with": (observed_only, True),
+    }
+
+    rows = []
+    for label, (frame, include_cause) in variants.items():
+        cols = GROUP_COLS + ["year"]
+        work = frame.copy()
+        if include_cause:
+            work["cause_of_loss"] = work["cause_of_loss"].fillna("Unknown")
+            cols = cols + ["cause_of_loss"]
+
+        for name in model_names:
+            for seed in seeds:
+                X_train, X_test, y_train, y_test = train_test_split(
+                    work[cols], work[TARGET], test_size=TEST_SIZE, random_state=seed
+                )
+                ct = ColumnTransformer(
+                    transformers=[(
+                        "cat",
+                        OneHotEncoder(
+                            drop="first" if name in DROP_FIRST_MODELS else None,
+                            handle_unknown="ignore",
+                        ),
+                        [c for c in cols if c != "year"],
+                    ), ("num", StandardScaler(), ["year"])]
+                )
+                with warnings.catch_warnings():
+                    warnings.simplefilter("ignore")
+                    pipe = build_pipeline(name, column_transformer=ct)
+                    pipe.fit(X_train, y_train)
+                    preds = pipe.predict(X_test)
+
+                rows.append({
+                    "variant": label, "model": name, "seed": seed,
+                    "n_rows": len(work),
+                    "test_r2": r2_score(y_test, preds),
+                    "test_mae": mean_absolute_error(y_test, preds),
+                })
+            if verbose:
+                sel = [r for r in rows if r["variant"] == label and r["model"] == name]
+                mean_r2 = sum(r["test_r2"] for r in sel) / len(sel)
+                print(f"  {label:<18}{name:<16}n={len(work):<7}mean test_r2={mean_r2:.4f}")
+
+    long = pd.DataFrame(rows)
+    wide = (
+        long.groupby(["model", "variant"])
+        .agg(r2_mean=("test_r2", "mean"), r2_std=("test_r2", "std"),
+             mae_mean=("test_mae", "mean"), n_rows=("n_rows", "first"))
+        .round(4).reset_index()
+    )
+    return long, wide
+
+
+# --------------------------------------------------------------------------
+# Regional representation and weighting
+# --------------------------------------------------------------------------
+def country_representation(df, sparse_threshold=50):
+    """Quantify how unevenly countries are represented."""
+    counts = df["country"].value_counts()
+    sparse = counts[counts < sparse_threshold]
+    return pd.DataFrame([{
+        "n_countries": int(counts.size),
+        "n_rows": len(df),
+        "top10_share_pct": round(100 * counts.head(10).sum() / len(df), 2),
+        "n_countries_below_threshold": int(sparse.size),
+        "sparse_threshold": sparse_threshold,
+        "rows_in_sparse_countries": int(sparse.sum()),
+        "sparse_rows_share_pct": round(100 * sparse.sum() / len(df), 2),
+        "median_rows_per_country": int(counts.median()),
+    }])
+
+
+def regional_weighting_analysis(df, model_names=None, cutoff_years=None,
+                                sparse_threshold=50, verbose=True):
+    """Compare unweighted training against inverse-frequency country weights.
+
+    Weighting each row by the reciprocal of its country's training count
+    makes every country contribute equally regardless of how many
+    observations it supplied. The question is not whether this improves the
+    overall score -- it generally will not, since it down-weights the
+    countries that dominate the test set -- but whether it improves
+    predictions for the sparsely observed countries that motivate it.
+
+    Scores are therefore reported separately for well-represented and
+    sparse countries, using the walk-forward split.
+
+    Only models accepting sample weights are eligible; the neural network
+    and nearest-neighbour regressors do not.
+    """
+    from validation import CUTOFF_YEARS
+
+    model_names = model_names or ["Random Forest", "Ridge", "Linear Regression"]
+    cutoff_years = cutoff_years or CUTOFF_YEARS
+
+    rows = []
+    for cutoff in cutoff_years:
+        train_df = df[df["year"] <= cutoff]
+        test_df = df[df["year"] > cutoff]
+        if train_df.empty or test_df.empty:
+            continue
+
+        counts = train_df["country"].value_counts()
+        # Countries absent from training get the weight of a single
+        # observation; they carry no information to down-weight anyway.
+        weights = train_df["country"].map(counts).astype(float).rdiv(1.0).to_numpy()
+        test_counts = test_df["country"].map(counts).fillna(0)
+        is_sparse = (test_counts < sparse_threshold).to_numpy()
+
+        X_train = train_df[GROUP_COLS + ["year"]]
+        y_train = train_df[TARGET]
+        X_test = test_df[GROUP_COLS + ["year"]]
+        y_test = test_df[TARGET].to_numpy()
+
+        for name in model_names:
+            for scheme, w in (("unweighted", None), ("inverse frequency", weights)):
+                with warnings.catch_warnings():
+                    warnings.simplefilter("ignore")
+                    pipe = build_pipeline(name, year_mode="scaled")
+                    if w is None:
+                        pipe.fit(X_train, y_train)
+                    else:
+                        pipe.fit(X_train, y_train, regressor__sample_weight=w)
+                    preds = pipe.predict(X_test)
+
+                entry = {
+                    "cutoff": cutoff, "model": name, "weighting": scheme,
+                    "mae_all": mean_absolute_error(y_test, preds),
+                    "r2_all": r2_score(y_test, preds),
+                    "n_sparse": int(is_sparse.sum()),
+                }
+                for label, mask in (("sparse", is_sparse), ("well_represented", ~is_sparse)):
+                    if mask.sum() > 1:
+                        entry[f"mae_{label}"] = mean_absolute_error(y_test[mask], preds[mask])
+                        entry[f"r2_{label}"] = r2_score(y_test[mask], preds[mask])
+                rows.append(entry)
+                if verbose:
+                    print(f"  cutoff {cutoff}  {name:<18}{scheme:<18}"
+                          f"mae_all={entry['mae_all']:.4f}  "
+                          f"mae_sparse={entry.get('mae_sparse', float('nan')):.4f}")
+
+    long = pd.DataFrame(rows)
+    wide = (
+        long.groupby(["model", "weighting"])
+        .agg(mae_all=("mae_all", "mean"), r2_all=("r2_all", "mean"),
+             mae_sparse=("mae_sparse", "mean"), r2_sparse=("r2_sparse", "mean"),
+             mae_well=("mae_well_represented", "mean"))
+        .round(4).reset_index()
+    )
+    return long, wide

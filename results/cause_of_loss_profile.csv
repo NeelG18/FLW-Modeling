@@ -1,0 +1,2 @@
+n_rows_total,n_rows_with_value,pct_coverage,n_distinct_values,mean_rows_per_value,n_values_occurring_once,pct_values_occurring_once,median_value_length_chars,max_value_length_chars
+26970,1023,3.79,375,2.73,247,65.9,25,2594

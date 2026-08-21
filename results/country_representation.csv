@@ -1,0 +1,2 @@
+n_countries,n_rows,top10_share_pct,n_countries_below_threshold,sparse_threshold,rows_in_sparse_countries,sparse_rows_share_pct,median_rows_per_country
+159,26970,32.74,81,50,1094,4.06,48
