@@ -238,8 +238,11 @@ def f3_loss_distribution():
         ax2.text(v + 1, i, f"{v:.1f}%", va="center", fontsize=7.5)
     ax2.set_xlim(0, 68); ax2.set_xlabel("Share of records (%)")
     ax2.set_title("Records by band")
-    fig.suptitle("F3. Observed loss is strongly right-skewed: 83.6% of records fall "
-                 "below 5%, and the top decile begins at 10%.", fontsize=9, y=1.04)
+    below5 = 100 * (y < 5).mean()
+    fig.suptitle(f"F3. Observed loss is strongly right-skewed: {below5:.1f}% of records in the "
+                 f"modelling frame fall below 5%, and the top decile begins at "
+                 f"{y.quantile(0.90):.0f}%, which is the severity threshold used throughout.",
+                 fontsize=9, y=1.04)
     return _save_fig(fig, "F3", "loss distribution", "3.1")
 
 
@@ -270,8 +273,8 @@ def f4_error_concentration():
     # Anchored well to the right of the marker line so neither is obscured.
     ax.annotate(f"records at or above 20% loss\n"
                 f"({cut_pct:.1f}% of records)\n"
-                f"{share_sq:.0f}% of squared error\n"
-                f"{share_ab:.0f}% of absolute error",
+                f"{share_sq:.1f}% of squared error\n"
+                f"{share_ab:.1f}% of absolute error",
                 xy=(cut_pct, share_sq), xytext=(34, 9), fontsize=7.8,
                 arrowprops=dict(arrowstyle="->", color="#666", lw=0.9),
                 bbox=dict(boxstyle="round,pad=0.35", fc="white", ec="#ccc", lw=0.7))

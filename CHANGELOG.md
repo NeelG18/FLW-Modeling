@@ -6,6 +6,16 @@ All notable changes to the analysis code are recorded here.
 
 ### Fixed
 
+- Distribution figure hardcoded a share that contradicted the bars beside
+  it: the value quoted was the share among held-out validation records
+  while the chart showed the full modelling frame. The share is now
+  derived from the data plotted.
+- Predicted-against-actual figure reported R-squared and mean absolute
+  error pooled over every held-out record, which does not equal the mean
+  across splits reported in the results table. The basis is now stated in
+  the title so the two are not read as the same quantity.
+- Error concentration figure reported its shares to the nearest whole
+  number, which did not match the text quoting one decimal place.
 - Regional weighting analysis was being run on the full modelling frame
   although it splits on time, so its test folds included the sparse
   2022-2024 years that the validation protocol excludes. It now uses the
