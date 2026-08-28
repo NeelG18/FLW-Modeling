@@ -120,7 +120,8 @@ def food_loss_comparison(model, data, vary, year=None, **fixed):
     return pd.DataFrame(rows).sort_values("predicted_loss_percentage").reset_index(drop=True)
 
 
-def plot_food_loss_comparison(model, data, vary, year=None, ax=None, **fixed):
+def plot_food_loss_comparison(model, data, vary, year=None, ax=None,
+                              compact=False, **fixed):
     """Draw the comparison returned by ``food_loss_comparison``."""
     results = food_loss_comparison(model, data, vary, year=year, **fixed)
     if results is None or results.empty:
@@ -145,10 +146,13 @@ def plot_food_loss_comparison(model, data, vary, year=None, ax=None, **fixed):
     span = _finite_span(results["actual_loss_percentage"], results["predicted_loss_percentage"])
     ax.set_xlim(*( (span[0] - 2, span[1] + 10) if span else (0, 100) ))
 
-    context = ", ".join(f"{v}" for v in fixed.values())
-    title_year = f" (Year: {year})" if year is not None else ""
-    ax.set_title(f"Actual vs Predicted Food Loss by {_AXIS_LABELS[vary]}\n"
-                 f"{context}{title_year}", fontsize=14)
+    # In the paper the country, commodity and year are stated in the caption,
+    # so the heading is suppressed there to avoid repeating it in the image.
+    if not compact:
+        context = ", ".join(f"{v}" for v in fixed.values())
+        title_year = f" (Year: {year})" if year is not None else ""
+        ax.set_title(f"Actual vs Predicted Food Loss by {_AXIS_LABELS[vary]}\n"
+                     f"{context}{title_year}", fontsize=14)
     ax.set_xlabel("Loss Percentage (%)", fontsize=12)
     ax.set_ylabel(_AXIS_LABELS[vary], fontsize=12)
     ax.set_yticks(positions + height / 2)

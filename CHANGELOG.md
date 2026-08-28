@@ -4,6 +4,16 @@ All notable changes to the analysis code are recorded here.
 
 ## [Unreleased]
 
+### Changed
+
+- Charts no longer draw a heading above the plotting area. The heading
+  restated the caption placed beneath the figure, so the same sentence
+  appeared twice wherever a figure was used. Panel headings inside
+  multi-panel figures are kept, since they identify which axes is which.
+  `plot_food_loss_comparison` gains a `compact` flag matching the one the
+  other plotting helpers already use, so callers that want the heading
+  keep it.
+
 ### Fixed
 
 - Distribution figure hardcoded a share that contradicted the bars beside
@@ -12,8 +22,8 @@ All notable changes to the analysis code are recorded here.
   derived from the data plotted.
 - Predicted-against-actual figure reported R-squared and mean absolute
   error pooled over every held-out record, which does not equal the mean
-  across splits reported in the results table. The basis is now stated in
-  the title so the two are not read as the same quantity.
+  across splits reported in the results table. The basis is recorded so
+  the two are not read as the same quantity.
 - Error concentration figure reported its shares to the nearest whole
   number, which did not match the text quoting one decimal place.
 - Regional weighting analysis was being run on the full modelling frame

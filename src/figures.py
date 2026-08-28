@@ -10,7 +10,6 @@ Figures are numbered F1-F16 and tables T1-T10. ``ITEMS`` records the topic
 group each belongs to.
 """
 
-import textwrap
 import warnings
 
 import matplotlib
@@ -104,8 +103,6 @@ def _predictions(name="time_aware_validation_predictions.csv"):
     return _read(name)
 
 
-def _wrap(ax, title, width=64):
-    ax.set_title("\n".join(textwrap.wrap(title, width)))
 
 
 # ==========================================================================
@@ -147,8 +144,6 @@ def f1_field_coverage():
     ax.set_xlim(0, 104)
     for y, v in enumerate(cov.to_numpy()):
         ax.text(v + 1, y, f"{v:.1f}", va="center", fontsize=7, color="#333")
-    _wrap(ax, "F1. Field coverage in the source extract. Five fields fall below "
-              "8%, including cause of loss and loss quantity.")
     return _save_fig(fig, "F1", "field coverage", "dataset")
 
 
@@ -165,8 +160,6 @@ def f2_records_per_year():
     ax.text(DENSE_YEAR_MAX + 0.7, counts.max() * 0.85, "validation\ncutoff",
             fontsize=7.5, color="#444")
     ax.set_xlabel("Year"); ax.set_ylabel("Records")
-    _wrap(ax, "F2. Records per year. The 2022-2024 tail holds 147, 44 and 144 records "
-              "against roughly 1,000-1,700 for earlier years, reflecting reporting lag.")
     return _save_fig(fig, "F2", "records per year", "dataset")
 
 
@@ -239,10 +232,6 @@ def f3_loss_distribution():
     ax2.set_xlim(0, 68); ax2.set_xlabel("Share of records (%)")
     ax2.set_title("Records by band")
     below5 = 100 * (y < 5).mean()
-    fig.suptitle("\n".join(textwrap.wrap(
-        f"F3. Observed loss is strongly right-skewed: {below5:.1f}% of records in the modelling "
-        f"frame fall below 5%, and the top decile begins at {y.quantile(0.90):.0f}%, which is "
-        f"the severity threshold used throughout.", 92)), fontsize=9, y=1.03)
     fig.tight_layout()
     return _save_fig(fig, "F3", "loss distribution", "metrics")
 
@@ -282,8 +271,6 @@ def f4_error_concentration():
     ax.set_xlabel("Records, ranked by observed loss, largest first (%)")
     ax.set_ylabel("Cumulative share of total error (%)")
     ax.legend(loc="lower right", fontsize=8)
-    _wrap(ax, "F4. Squared error is concentrated in the records with the largest "
-              "observed losses; absolute error is spread far more evenly.")
     return _save_fig(fig, "F4", "error concentration", "metrics")
 
 
@@ -320,8 +307,6 @@ def f5_validation_schematic():
     ax2.set_xticklabels([f"group\nblock {i+1}" for i in range(5)], fontsize=7)
     ax2.grid(False)
     ax2.set_title("Grouped: whole country × commodity pairs held out (1,437 pairs)", fontsize=9)
-    fig.suptitle("F5. The two validation procedures. Each answers a different question: "
-                 "reaching a later year, and reaching an unseen pair.", fontsize=9, y=1.02)
     fig.tight_layout()
     return _save_fig(fig, "F5", "validation schematic", "validation")
 
@@ -410,9 +395,6 @@ def f6_paired_comparison():
         ax.set_title(title, fontsize=9)
         if metric == "squared_error":
             ax.set_xlim(-8, 12)
-    fig.suptitle("F6. Paired differences against the persistence baseline, one point per "
-                 "cutoff, diamond = mean. Negative favours the model.\nBlue: interval "
-                 "entirely below zero. Red: entirely above.", fontsize=9, y=1.06)
     fig.tight_layout()
     return _save_fig(fig, "F6", "paired comparison vs baseline", "results")
 
@@ -447,11 +429,6 @@ def f7_residuals():
     fig, axes = plt.subplots(1, 2, figsize=(9.6, 4.4))
     plot_predicted_vs_actual(preds, FLAGSHIP_MODEL, ax=axes[0], compact=True)
     plot_residuals(preds, FLAGSHIP_MODEL, ax=axes[1], compact=True)
-    fig.suptitle("\n".join(textwrap.wrap(
-        "F7. Held-out predictions, pooled across all cutoffs. The model compresses the upper "
-        "tail: no prediction exceeds 51.8% while observations reach 62.9%. The per-cutoff means "
-        "reported in Table 5 are a different aggregation and do not coincide.", 104)),
-        fontsize=9, y=1.02)
     fig.tight_layout()
     return _save_fig(fig, "F7", "predicted vs actual and residuals", "targeting")
 
@@ -475,9 +452,6 @@ def f8_targeting_curve():
     axes[0].axhline(rf.attrs["base_rate"], color=NEUTRAL, linestyle=":", linewidth=1)
     axes[0].text(22, rf.attrs["base_rate"] + 0.012, "prevalence", fontsize=7, color=NEUTRAL)
     axes[0].legend(fontsize=8)
-    fig.suptitle(f"F8. Screening performance at severity ≥{SEVERITY:.0f}% loss. Inspecting the "
-                 "top 5% recovers 41.5% of severe records at 8.3× the random rate.",
-                 fontsize=9, y=1.05)
     fig.tight_layout()
     return _save_fig(fig, "F8", "targeting curve", "targeting")
 
@@ -500,8 +474,6 @@ def f9_threshold_sensitivity():
     ax.text(SEVERITY + 0.4, 0.66, "threshold used\n(top decile)", fontsize=7.5, color="#444")
     ax.set_xlabel("Severity threshold (% loss)"); ax.set_ylabel("Average precision")
     ax.legend(fontsize=7.5)
-    _wrap(ax, "F9. Average precision across severity thresholds. Below about 8% the "
-              "baseline is ahead; the models' advantage is specific to severe losses.")
     return _save_fig(fig, "F9", "threshold sensitivity", "targeting")
 
 
@@ -521,8 +493,6 @@ def f10_loss_capture():
     ax.set_xlabel("Top k% of the ranking inspected")
     ax.set_ylabel("Share of total observed loss captured (%)")
     ax.legend(fontsize=8)
-    _wrap(ax, "F10. Loss captured at each inspection budget. Loss is a rate, so every "
-              "record counts equally regardless of production volume.")
     return _save_fig(fig, "F10", "loss capture", "targeting")
 
 
@@ -554,12 +524,9 @@ def f11_stage_comparison():
     # Chosen for coverage: this pair is observed at ten stages in one year, so
     # actual and predicted can be compared across the whole chain rather than
     # leaving most bars empty.
-    plot_food_loss_comparison(pipe, frame, vary="food_supply_stage",
+    plot_food_loss_comparison(pipe, frame, vary="food_supply_stage", compact=True,
                               country="Bangladesh", commodity="Potatoes",
                               year=2009, ax=ax)
-    _wrap(ax, "F11. Actual against random forest predictions by supply chain stage, "
-              "potatoes in Bangladesh, 2009 — the pair with the widest stage coverage "
-              "in the data. Read as an ordering: magnitudes understate severe losses.", 88)
     return _save_fig(fig, "F11", "stage comparison random forest", "prediction")
 
 
@@ -599,9 +566,6 @@ def f12_gap_filling():
                Rectangle((0, 0), 1, 1, color=HIGHLIGHT)]
     ax.legend(handles, ["measured for this pair", "never measured (estimated)"],
               fontsize=7.5, loc="lower right")
-    _wrap(ax, f"F12. Gap filling for {commodity.lower()} in {country}, measured at one "
-              f"stage only. Estimates for the remaining stages are what a lookup cannot "
-              f"supply. Span stages excluded.", 82)
     return _save_fig(fig, "F12", "gap filling demonstration", "prediction")
 
 
@@ -645,10 +609,6 @@ def f13_country_representation():
     ax2.legend(fontsize=7.5, loc="upper center", ncol=2,
                bbox_to_anchor=(0.5, 1.0), borderaxespad=0.2)
     ax2.set_title("Error by representation, and the effect of weighting", fontsize=9)
-    fig.suptitle(f"F13. Ten countries supply {top10:.1f}% of records. Error is "
-                 f"{agg.mae_sparse['unweighted'] / agg.mae_well_represented['unweighted']:.1f}× "
-                 "higher for sparsely recorded countries, and weighting does not close the gap.",
-                 fontsize=9, y=1.05)
     fig.tight_layout()
     return _save_fig(fig, "F13", "country representation", "representation")
 
@@ -700,9 +660,6 @@ def f14_stage_coverage():
     ax2.set_xlabel("Country × commodity × stage combinations")
     ax2.set_xlim(0, max(vals) * 1.22)
     ax2.set_title("The gap the model addresses", fontsize=9)
-    fig.suptitle("F14. Counting only stages at which a commodity is measured somewhere, "
-                 f"{int(cov.plausible_gap):,} combinations have no observation.",
-                 fontsize=9, y=1.05)
     fig.tight_layout()
     return _save_fig(fig, "F14", "stage coverage", "coverage")
 
@@ -743,9 +700,6 @@ def f15_network_architecture():
     ax.text(0.5, Y_CONN - 0.075, "weights and biases per connection block",
             ha="center", fontsize=7.6, color="#777", style="italic")
     ax.set_xlim(0, 1); ax.set_ylim(-0.02, 1.08); ax.axis("off")
-    ax.set_title("F15. The multi-layer perceptron used here: three hidden layers over 383 "
-                 "encoded inputs,\n102,001 trainable parameters, ReLU activation, trained by "
-                 "stochastic gradient descent.", fontsize=9, pad=14)
     return _save_fig(fig, "F15", "network architecture", "method")
 
 
@@ -776,9 +730,6 @@ def f16_decision_tree_subtree():
     plot_tree(pipe[-1], max_depth=3, feature_names=pretty, filled=True,
               impurity=False, fontsize=6, ax=ax, precision=2,
               proportion=True, rounded=True)
-    ax.set_title("F16. The first three levels of the fitted regression tree. The full "
-                 "tree is grown without a depth limit; this excerpt is illustrative of "
-                 "the structure, not the whole model.", fontsize=9)
     return _save_fig(fig, "F16", "decision tree subtree", "method")
 
 
