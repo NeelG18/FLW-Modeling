@@ -1,0 +1,11 @@
+Property,Value
+Rows where the field is recorded,"1,023 (3.79%)"
+Distinct values,375
+Mean rows per value,2.73
+Values occurring exactly once,247 (65.9%)
+Median value length (characters),25
+Longest value (characters),"2,594"
+"Random forest R², full with",0.6633 ± 0.0212
+"Random forest R², full without",0.6603 ± 0.0176
+"Random forest R², observed with",0.3897 ± 0.0786
+"Random forest R², observed without",0.3469 ± 0.0625

@@ -1,0 +1,11 @@
+Model,Comparisons,Correct (%),Chance (%),Lift
+Linear Regression,587,81.77,34.0,2.4
+Ridge,587,81.77,34.0,2.4
+SVM,587,81.6,34.0,2.4
+Random Forest,587,79.56,34.0,2.34
+Persistence baseline,587,78.54,34.0,2.31
+KNN,587,78.36,34.0,2.31
+Neural Network,587,76.32,34.0,2.24
+Linear trend baseline,587,74.28,34.0,2.18
+Decision Tree,587,72.74,34.0,2.14
+Poly Ridge,587,67.12,34.0,1.97

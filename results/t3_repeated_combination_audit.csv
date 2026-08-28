@@ -1,0 +1,10 @@
+Property,Value
+Records in the frame,"26,970"
+Distinct feature combinations,"18,391"
+Records sharing a combination,"8,579 (31.81%)"
+Largest repeated group,73 records
+Test records whose combination is in training,"2,387 (44.25%)"
+Random Forest: MSE seen vs unseen,14.77 vs 13.42
+KNN: MSE seen vs unseen,17.62 vs 14.05
+Decision Tree: MSE seen vs unseen,15.69 vs 19.66
+Ridge: MSE seen vs unseen,17.17 vs 23.09

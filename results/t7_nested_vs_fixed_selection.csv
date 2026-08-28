@@ -1,0 +1,7 @@
+Model,mae_mean fixed,mae_mean nested,Best objective,Change
+Decision Tree,1.7033,1.5406,mae,-0.1627
+Random Forest,1.387,1.3793,mae,-0.0077
+Ridge,1.7571,1.7535,average_precision,-0.0036
+KNN,1.3928,1.3903,mae,-0.0025
+Linear Regression,1.7523,1.7539,average_precision,0.0016
+Poly Ridge,1.7688,1.8048,average_precision,0.036

@@ -1,0 +1,13 @@
+Quantity,Value
+Records in the source extract,"30,361"
+Records lacking a food supply stage,"3,391"
+Records in the modelling frame,"26,970"
+Records used for validation (2000-2021),"26,635"
+Countries,159
+Commodity labels,203
+CPC codes,186
+Supply chain stages,20
+Year range,2000-2024
+Median loss percentage,2.65
+Mean loss percentage,4.69
+Maximum loss percentage,65.0

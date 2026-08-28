@@ -1,0 +1,9 @@
+Model,Weighting,MAE all,MAE sparse,R² sparse
+— representation —,,,,
+159 countries; top 10 supply 32.74% of records; 81 below 50 records,,,,
+Linear Regression,inverse frequency,2.3783,6.3862,0.0141
+Linear Regression,unweighted,2.1408,5.7553,0.1565
+Random Forest,inverse frequency,1.8912,5.8897,0.1249
+Random Forest,unweighted,1.8596,5.672,0.1672
+Ridge,inverse frequency,2.4327,6.0531,0.1603
+Ridge,unweighted,2.1238,5.4972,0.2112
