@@ -1,4 +1,4 @@
-"""Generation of every figure and table reported in the paper.
+"""Generation of the figures and tables summarising the analysis.
 
 Each function here produces one numbered item and writes it to ``figures/``
 or ``results/``. Nothing is drawn by hand: every value comes from the tables
@@ -6,8 +6,8 @@ written by the validation, ablation and targeting modules, so a figure
 cannot drift from the result it depicts. Re-running ``build_all`` after a
 change to the analysis regenerates the whole set.
 
-Figures are numbered F1-F16 and tables T1-T10 in the order they appear in
-the paper. The mapping to manuscript sections is recorded in ``ITEMS``.
+Figures are numbered F1-F16 and tables T1-T10. ``ITEMS`` records the topic
+group each belongs to.
 """
 
 import textwrap
@@ -53,23 +53,23 @@ plt.rcParams.update({
     "pdf.fonttype": 42,
 })
 
-# Formats written for every figure. PNG is what the manuscript embeds; SVG and
-# PDF are vector and can be opened in a drawing program to adjust a label or a
-# colour by hand without regenerating anything.
+# Formats written for every figure. PNG is the raster output; SVG and PDF are
+# vector and can be opened in a drawing program to adjust a label or a colour
+# by hand without regenerating anything.
 FIGURE_FORMATS = ("png", "svg", "pdf")
 
 FLAGSHIP_MODEL = "Random Forest"
 BASELINE_MODEL = "Persistence baseline"
 SEVERITY = 10.0
 
-ITEMS = {}   # id -> (section, description), filled by the decorators below
+ITEMS = {}   # id -> (group, description), filled as each item is built
 
 
-def _register(item_id, section, description):
-    ITEMS[item_id] = (section, description)
+def _register(item_id, group, description):
+    ITEMS[item_id] = (group, description)
 
 
-def _save_fig(fig, item_id, description, section, formats=FIGURE_FORMATS):
+def _save_fig(fig, item_id, description, group, formats=FIGURE_FORMATS):
     FIGURES_DIR.mkdir(exist_ok=True)
     stem = f"{item_id.lower()}_{_slug(description)}"
     png_path = FIGURES_DIR / f"{stem}.png"
@@ -80,15 +80,15 @@ def _save_fig(fig, item_id, description, section, formats=FIGURE_FORMATS):
             target = FIGURES_DIR / "vector" / f"{stem}.{fmt}"
         fig.savefig(target, format=fmt)
     plt.close(fig)
-    _register(item_id, section, description)
+    _register(item_id, group, description)
     return png_path
 
 
-def _save_table(frame, item_id, description, section, index=False):
+def _save_table(frame, item_id, description, group, index=False):
     RESULTS_DIR.mkdir(exist_ok=True)
     path = RESULTS_DIR / f"{item_id.lower()}_{_slug(description)}.csv"
     frame.to_csv(path, index=index)
-    _register(item_id, section, description)
+    _register(item_id, group, description)
     return path
 
 
@@ -109,7 +109,7 @@ def _wrap(ax, title, width=64):
 
 
 # ==========================================================================
-# SECTION 2 - DATASET
+# DATASET
 # ==========================================================================
 def t1_dataset_composition():
     """T1. What the modelling frame contains, before and after filtering."""
@@ -131,7 +131,7 @@ def t1_dataset_composition():
         ("Maximum loss percentage", f"{frame[TARGET].max():.1f}"),
     ]
     out = pd.DataFrame(rows, columns=["Quantity", "Value"])
-    return _save_table(out, "T1", "dataset composition", "2")
+    return _save_table(out, "T1", "dataset composition", "dataset")
 
 
 def f1_field_coverage():
@@ -149,7 +149,7 @@ def f1_field_coverage():
         ax.text(v + 1, y, f"{v:.1f}", va="center", fontsize=7, color="#333")
     _wrap(ax, "F1. Field coverage in the source extract. Five fields fall below "
               "8%, including cause of loss and loss quantity.")
-    return _save_fig(fig, "F1", "field coverage", "2")
+    return _save_fig(fig, "F1", "field coverage", "dataset")
 
 
 def f2_records_per_year():
@@ -167,7 +167,7 @@ def f2_records_per_year():
     ax.set_xlabel("Year"); ax.set_ylabel("Records")
     _wrap(ax, "F2. Records per year. The 2022-2024 tail holds 147, 44 and 144 records "
               "against roughly 1,000-1,700 for earlier years, reflecting reporting lag.")
-    return _save_fig(fig, "F2", "records per year", "2")
+    return _save_fig(fig, "F2", "records per year", "dataset")
 
 
 def t2_cause_of_loss():
@@ -189,7 +189,7 @@ def t2_cause_of_loss():
     for _, r in agg[agg.model == FLAGSHIP_MODEL].iterrows():
         rows.append((f"Random forest R², {r.variant}", f"{r['mean']:.4f} ± {r['std']:.4f}"))
     out = pd.DataFrame(rows, columns=["Property", "Value"])
-    return _save_table(out, "T2", "cause of loss profile and sensitivity", "2")
+    return _save_table(out, "T2", "cause of loss profile and sensitivity", "dataset")
 
 
 def t3_repeated_combinations():
@@ -209,11 +209,11 @@ def t3_repeated_combinations():
         rows.append((f"{r.model}: MSE seen vs unseen",
                      f"{r.mse_seen:.2f} vs {r.mse_unseen:.2f}"))
     out = pd.DataFrame(rows, columns=["Property", "Value"])
-    return _save_table(out, "T3", "repeated combination audit", "2")
+    return _save_table(out, "T3", "repeated combination audit", "dataset")
 
 
 # ==========================================================================
-# SECTION 3 - METHODOLOGY
+# METHOD
 # ==========================================================================
 def f3_loss_distribution():
     """F3. The skew that shapes every metric choice."""
@@ -244,7 +244,7 @@ def f3_loss_distribution():
         f"frame fall below 5%, and the top decile begins at {y.quantile(0.90):.0f}%, which is "
         f"the severity threshold used throughout.", 92)), fontsize=9, y=1.03)
     fig.tight_layout()
-    return _save_fig(fig, "F3", "loss distribution", "3.1")
+    return _save_fig(fig, "F3", "loss distribution", "metrics")
 
 
 def f4_error_concentration():
@@ -284,7 +284,7 @@ def f4_error_concentration():
     ax.legend(loc="lower right", fontsize=8)
     _wrap(ax, "F4. Squared error is concentrated in the records with the largest "
               "observed losses; absolute error is spread far more evenly.")
-    return _save_fig(fig, "F4", "error concentration", "3.1")
+    return _save_fig(fig, "F4", "error concentration", "metrics")
 
 
 def f5_validation_schematic():
@@ -323,7 +323,7 @@ def f5_validation_schematic():
     fig.suptitle("F5. The two validation procedures. Each answers a different question: "
                  "reaching a later year, and reaching an unseen pair.", fontsize=9, y=1.02)
     fig.tight_layout()
-    return _save_fig(fig, "F5", "validation schematic", "3.2")
+    return _save_fig(fig, "F5", "validation schematic", "validation")
 
 
 def t4_random_forest_ablation():
@@ -338,11 +338,11 @@ def t4_random_forest_ablation():
                      & (abl.max_depth == "None")).map({True: "yes", False: ""})
     out = abl[["bootstrap", "max_features", "max_depth", "r2_mean", "r2_std",
                "mae_mean", "r2_rank", "mae_rank", "in_use"]].sort_values("r2_rank")
-    return _save_table(out.round(4), "T4", "random forest ablation", "3.9")
+    return _save_table(out.round(4), "T4", "random forest ablation", "tuning")
 
 
 # ==========================================================================
-# SECTION 4 - RESULTS
+# RESULTS
 # ==========================================================================
 def _adjusted(r2, n, p=383):
     from validation import adjusted_r2
@@ -370,7 +370,7 @@ def t5_primary_results():
             "AP @10%": round(rank.loc[r.model, "ap@10"], 3) if r.model in rank.index else np.nan,
         })
     out = pd.DataFrame(rows).sort_values("MAE").reset_index(drop=True)
-    return _save_table(out, "T5", "primary walk-forward results", "4.1")
+    return _save_table(out, "T5", "primary walk-forward results", "results")
 
 
 def t6_grouped_results():
@@ -386,7 +386,7 @@ def t6_grouped_results():
         "R²": summary.r2_mean.round(3),
         "R² sd": summary.r2_std.round(3),
     }).sort_values("MAE").reset_index(drop=True)
-    return _save_table(out, "T6", "grouped cv results", "4.1")
+    return _save_table(out, "T6", "grouped cv results", "results")
 
 
 def f6_paired_comparison():
@@ -414,7 +414,7 @@ def f6_paired_comparison():
                  "cutoff, diamond = mean. Negative favours the model.\nBlue: interval "
                  "entirely below zero. Red: entirely above.", fontsize=9, y=1.06)
     fig.tight_layout()
-    return _save_fig(fig, "F6", "paired comparison vs baseline", "4.1")
+    return _save_fig(fig, "F6", "paired comparison vs baseline", "results")
 
 
 def t7_nested_tuning():
@@ -426,7 +426,7 @@ def t7_nested_tuning():
                 .rename(columns={"model": "Model", "objective": "Best objective"}))
     out["Change"] = (out["mae_mean nested"] - out["mae_mean fixed"]).round(4)
     out = out.round(4).sort_values("Change")
-    return _save_table(out, "T7", "nested vs fixed selection", "4.1")
+    return _save_table(out, "T7", "nested vs fixed selection", "results")
 
 
 def t8_error_by_band():
@@ -437,7 +437,7 @@ def t8_error_by_band():
         "actual_mean": "Mean observed", "predicted_mean": "Mean predicted",
         "mean_residual": "Mean residual", "mae": "MAE",
         "pct_underestimated": "Underestimated (%)"})
-    return _save_table(out, "T8", "error by observed loss band", "4.2")
+    return _save_table(out, "T8", "error by observed loss band", "targeting")
 
 
 def f7_residuals():
@@ -453,7 +453,7 @@ def f7_residuals():
         "reported in Table 5 are a different aggregation and do not coincide.", 104)),
         fontsize=9, y=1.02)
     fig.tight_layout()
-    return _save_fig(fig, "F7", "predicted vs actual and residuals", "4.2")
+    return _save_fig(fig, "F7", "predicted vs actual and residuals", "targeting")
 
 
 def f8_targeting_curve():
@@ -479,7 +479,7 @@ def f8_targeting_curve():
                  "top 5% recovers 41.5% of severe records at 8.3× the random rate.",
                  fontsize=9, y=1.05)
     fig.tight_layout()
-    return _save_fig(fig, "F8", "targeting curve", "4.2")
+    return _save_fig(fig, "F8", "targeting curve", "targeting")
 
 
 def f9_threshold_sensitivity():
@@ -502,7 +502,7 @@ def f9_threshold_sensitivity():
     ax.legend(fontsize=7.5)
     _wrap(ax, "F9. Average precision across severity thresholds. Below about 8% the "
               "baseline is ahead; the models' advantage is specific to severe losses.")
-    return _save_fig(fig, "F9", "threshold sensitivity", "4.2")
+    return _save_fig(fig, "F9", "threshold sensitivity", "targeting")
 
 
 def f10_loss_capture():
@@ -523,7 +523,7 @@ def f10_loss_capture():
     ax.legend(fontsize=8)
     _wrap(ax, "F10. Loss captured at each inspection budget. Loss is a rate, so every "
               "record counts equally regardless of production volume.")
-    return _save_fig(fig, "F10", "loss capture", "4.2")
+    return _save_fig(fig, "F10", "loss capture", "targeting")
 
 
 def t9_worst_stage():
@@ -532,7 +532,7 @@ def t9_worst_stage():
     out = ws.rename(columns={"model": "Model", "n_comparisons": "Comparisons",
                              "correct_pct": "Correct (%)", "chance_pct": "Chance (%)",
                              "lift": "Lift"}).round(2)
-    return _save_table(out, "T9", "worst stage identification", "4.3")
+    return _save_table(out, "T9", "worst stage identification", "prediction")
 
 
 def _fit_flagship(include_year=True):
@@ -560,7 +560,7 @@ def f11_stage_comparison():
     _wrap(ax, "F11. Actual against random forest predictions by supply chain stage, "
               "potatoes in Bangladesh, 2009 — the pair with the widest stage coverage "
               "in the data. Read as an ordering: magnitudes understate severe losses.", 88)
-    return _save_fig(fig, "F11", "stage comparison random forest", "4.3")
+    return _save_fig(fig, "F11", "stage comparison random forest", "prediction")
 
 
 def f12_gap_filling():
@@ -573,9 +573,9 @@ def f12_gap_filling():
     country, commodity = max(singles, key=lambda k: counts[k])
     observed = set(frame[(frame.country == country) &
                          (frame.commodity == commodity)].food_supply_stage)
-    # Span stages are excluded for the reason given in Section 3: they cover
-    # several positions and so are not comparable with single ones on the
-    # same axis.
+    # Span stages are excluded for the reason recorded in targeting.SPAN_STAGES:
+    # they cover several positions and so are not comparable with single ones
+    # on the same axis.
     from targeting import SPAN_STAGES
     plausible = set(frame[frame.commodity == commodity].food_supply_stage) - SPAN_STAGES
     stages = sorted(plausible)
@@ -602,11 +602,11 @@ def f12_gap_filling():
     _wrap(ax, f"F12. Gap filling for {commodity.lower()} in {country}, measured at one "
               f"stage only. Estimates for the remaining stages are what a lookup cannot "
               f"supply. Span stages excluded.", 82)
-    return _save_fig(fig, "F12", "gap filling demonstration", "4.3")
+    return _save_fig(fig, "F12", "gap filling demonstration", "prediction")
 
 
 # ==========================================================================
-# SECTION 4.4 AND 5 - LIMITATIONS AND CONCLUSION
+# REPRESENTATION AND COVERAGE
 # ==========================================================================
 def f13_country_representation():
     """F13. How unevenly the record count is distributed across countries."""
@@ -650,7 +650,7 @@ def f13_country_representation():
                  "higher for sparsely recorded countries, and weighting does not close the gap.",
                  fontsize=9, y=1.05)
     fig.tight_layout()
-    return _save_fig(fig, "F13", "country representation", "4.4")
+    return _save_fig(fig, "F13", "country representation", "representation")
 
 
 def t10_representation_and_weighting():
@@ -670,7 +670,7 @@ def t10_representation_and_weighting():
     out = pd.concat([header, agg], ignore_index=True).rename(columns={
         "model": "Model", "weighting": "Weighting", "mae_all": "MAE all",
         "mae_sparse": "MAE sparse", "r2_sparse": "R² sparse"})
-    return _save_table(out, "T10", "representation and weighting", "4.4")
+    return _save_table(out, "T10", "representation and weighting", "representation")
 
 
 def f14_stage_coverage():
@@ -704,11 +704,11 @@ def f14_stage_coverage():
                  f"{int(cov.plausible_gap):,} combinations have no observation.",
                  fontsize=9, y=1.05)
     fig.tight_layout()
-    return _save_fig(fig, "F14", "stage coverage", "5")
+    return _save_fig(fig, "F14", "stage coverage", "coverage")
 
 
 # ==========================================================================
-# METHOD ILLUSTRATIONS - originals replacing borrowed diagrams
+# METHOD ILLUSTRATIONS
 # ==========================================================================
 def f15_network_architecture():
     """F15. The actual network, replacing a borrowed diagram of a different one."""
@@ -746,7 +746,7 @@ def f15_network_architecture():
     ax.set_title("F15. The multi-layer perceptron used here: three hidden layers over 383 "
                  "encoded inputs,\n102,001 trainable parameters, ReLU activation, trained by "
                  "stochastic gradient descent.", fontsize=9, pad=14)
-    return _save_fig(fig, "F15", "network architecture", "3.7")
+    return _save_fig(fig, "F15", "network architecture", "method")
 
 
 def f16_decision_tree_subtree():
@@ -779,7 +779,7 @@ def f16_decision_tree_subtree():
     ax.set_title("F16. The first three levels of the fitted regression tree. The full "
                  "tree is grown without a depth limit; this excerpt is illustrative of "
                  "the structure, not the whole model.", fontsize=9)
-    return _save_fig(fig, "F16", "decision tree subtree", "3.8")
+    return _save_fig(fig, "F16", "decision tree subtree", "method")
 
 
 # ==========================================================================
@@ -813,12 +813,12 @@ def build_all(verbose=True):
             status, where = "ok", path.name
         except Exception as exc:
             status, where = f"FAILED: {type(exc).__name__}: {exc}", ""
-        section, description = ITEMS.get(item, ("", fn.__name__))
-        rows.append({"item": item, "section": section,
+        group, description = ITEMS.get(item, ("", fn.__name__))
+        rows.append({"item": item, "group": group,
                      "description": description, "file": where, "status": status})
         if verbose:
             mark = "  " if status == "ok" else "!!"
-            print(f"{mark} {item:<4} §{section:<5} {description:<42} {where or status}")
+            print(f"{mark} {item:<4} {group:<15} {description:<42} {where or status}")
     manifest = pd.DataFrame(rows)
     manifest.to_csv(RESULTS_DIR / "figure_manifest.csv", index=False)
     return manifest

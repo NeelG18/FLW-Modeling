@@ -179,7 +179,7 @@ def paired_ranking_bootstrap(predictions_df, model_name, baseline, threshold=Non
 def worst_stage_accuracy(predictions_df, exclude_spans=True):
     """How often the highest-predicted stage is the highest-observed one.
 
-    This is the task the paper's stage comparisons illustrate. Span stages
+    This is the task the stage comparisons illustrate. Span stages
     are excluded by default: an aggregate accumulates loss over everything
     it covers, so it would win the comparison by construction.
     """

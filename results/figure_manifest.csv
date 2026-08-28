@@ -1,27 +1,27 @@
-item,section,description,file,status
-T1,2,dataset composition,t1_dataset_composition.csv,ok
-F1,2,field coverage,f1_field_coverage.png,ok
-F2,2,records per year,f2_records_per_year.png,ok
-T2,2,cause of loss profile and sensitivity,t2_cause_of_loss_profile_and_sensitivity.csv,ok
-T3,2,repeated combination audit,t3_repeated_combination_audit.csv,ok
-F3,3.1,loss distribution,f3_loss_distribution.png,ok
-F4,3.1,error concentration,f4_error_concentration.png,ok
-F5,3.2,validation schematic,f5_validation_schematic.png,ok
-T4,3.9,random forest ablation,t4_random_forest_ablation.csv,ok
-T5,4.1,primary walk-forward results,t5_primary_walk_forward_results.csv,ok
-T6,4.1,grouped cv results,t6_grouped_cv_results.csv,ok
-F6,4.1,paired comparison vs baseline,f6_paired_comparison_vs_baseline.png,ok
-T7,4.1,nested vs fixed selection,t7_nested_vs_fixed_selection.csv,ok
-T8,4.2,error by observed loss band,t8_error_by_observed_loss_band.csv,ok
-F7,4.2,predicted vs actual and residuals,f7_predicted_vs_actual_and_residuals.png,ok
-F8,4.2,targeting curve,f8_targeting_curve.png,ok
-F9,4.2,threshold sensitivity,f9_threshold_sensitivity.png,ok
-F10,4.2,loss capture,f10_loss_capture.png,ok
-T9,4.3,worst stage identification,t9_worst_stage_identification.csv,ok
-F11,4.3,stage comparison random forest,f11_stage_comparison_random_forest.png,ok
-F12,4.3,gap filling demonstration,f12_gap_filling_demonstration.png,ok
-F13,4.4,country representation,f13_country_representation.png,ok
-T10,4.4,representation and weighting,t10_representation_and_weighting.csv,ok
-F14,5,stage coverage,f14_stage_coverage.png,ok
-F15,3.7,network architecture,f15_network_architecture.png,ok
-F16,3.8,decision tree subtree,f16_decision_tree_subtree.png,ok
+item,group,description,file,status
+T1,dataset,dataset composition,t1_dataset_composition.csv,ok
+F1,dataset,field coverage,f1_field_coverage.png,ok
+F2,dataset,records per year,f2_records_per_year.png,ok
+T2,dataset,cause of loss profile and sensitivity,t2_cause_of_loss_profile_and_sensitivity.csv,ok
+T3,dataset,repeated combination audit,t3_repeated_combination_audit.csv,ok
+F3,metrics,loss distribution,f3_loss_distribution.png,ok
+F4,metrics,error concentration,f4_error_concentration.png,ok
+F5,validation,validation schematic,f5_validation_schematic.png,ok
+T4,tuning,random forest ablation,t4_random_forest_ablation.csv,ok
+T5,results,primary walk-forward results,t5_primary_walk_forward_results.csv,ok
+T6,results,grouped cv results,t6_grouped_cv_results.csv,ok
+F6,results,paired comparison vs baseline,f6_paired_comparison_vs_baseline.png,ok
+T7,results,nested vs fixed selection,t7_nested_vs_fixed_selection.csv,ok
+T8,targeting,error by observed loss band,t8_error_by_observed_loss_band.csv,ok
+F7,targeting,predicted vs actual and residuals,f7_predicted_vs_actual_and_residuals.png,ok
+F8,targeting,targeting curve,f8_targeting_curve.png,ok
+F9,targeting,threshold sensitivity,f9_threshold_sensitivity.png,ok
+F10,targeting,loss capture,f10_loss_capture.png,ok
+T9,prediction,worst stage identification,t9_worst_stage_identification.csv,ok
+F11,prediction,stage comparison random forest,f11_stage_comparison_random_forest.png,ok
+F12,prediction,gap filling demonstration,f12_gap_filling_demonstration.png,ok
+F13,representation,country representation,f13_country_representation.png,ok
+T10,representation,representation and weighting,t10_representation_and_weighting.csv,ok
+F14,coverage,stage coverage,f14_stage_coverage.png,ok
+F15,method,network architecture,f15_network_architecture.png,ok
+F16,method,decision tree subtree,f16_decision_tree_subtree.png,ok

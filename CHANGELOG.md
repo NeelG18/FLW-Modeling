@@ -117,13 +117,12 @@ All notable changes to the analysis code are recorded here.
 
 ### Added
 
-- Figure and table generation module producing every numbered item in the
-  paper from the result tables rather than by hand, so a figure cannot
+- Figure and table generation module producing every numbered figure and
+  table from the result tables rather than by hand, so a figure cannot
   drift from the finding it depicts. Sixteen figures and ten tables, with
-  a manifest recording which manuscript section each belongs to. Two
-  method illustrations previously reproduced from other publications are
-  replaced by originals drawn from the fitted models: the actual network
-  architecture, and the first three levels of the fitted regression tree.
+  a manifest recording the topic group each belongs to. The two method
+  illustrations are drawn from the fitted models: the network architecture
+  as configured, and the first three levels of the fitted regression tree.
 - Ranking and screening evaluation: average precision across several
   severity thresholds, rank correlation, precision/recall/lift at k, and
   share of observed loss captured at k against a perfect-ranking ceiling.
