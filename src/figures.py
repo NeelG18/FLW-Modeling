@@ -47,7 +47,16 @@ plt.rcParams.update({
     "grid.alpha": 0.25,
     "grid.linestyle": "--",
     "legend.frameon": False,
+    # Keep text as text in SVG exports rather than converting it to outlines,
+    # so labels stay editable in a vector editor.
+    "svg.fonttype": "none",
+    "pdf.fonttype": 42,
 })
+
+# Formats written for every figure. PNG is what the manuscript embeds; SVG and
+# PDF are vector and can be opened in a drawing program to adjust a label or a
+# colour by hand without regenerating anything.
+FIGURE_FORMATS = ("png", "svg", "pdf")
 
 FLAGSHIP_MODEL = "Random Forest"
 BASELINE_MODEL = "Persistence baseline"
@@ -60,13 +69,19 @@ def _register(item_id, section, description):
     ITEMS[item_id] = (section, description)
 
 
-def _save_fig(fig, item_id, description, section):
+def _save_fig(fig, item_id, description, section, formats=FIGURE_FORMATS):
     FIGURES_DIR.mkdir(exist_ok=True)
-    path = FIGURES_DIR / f"{item_id.lower()}_{_slug(description)}.png"
-    fig.savefig(path)
+    stem = f"{item_id.lower()}_{_slug(description)}"
+    png_path = FIGURES_DIR / f"{stem}.png"
+    for fmt in formats:
+        target = FIGURES_DIR / f"{stem}.{fmt}"
+        if fmt != "png":
+            (FIGURES_DIR / "vector").mkdir(exist_ok=True)
+            target = FIGURES_DIR / "vector" / f"{stem}.{fmt}"
+        fig.savefig(target, format=fmt)
     plt.close(fig)
     _register(item_id, section, description)
-    return path
+    return png_path
 
 
 def _save_table(frame, item_id, description, section, index=False):
@@ -231,29 +246,40 @@ def f3_loss_distribution():
 def f4_error_concentration():
     """F4. How few records determine a squared-error metric."""
     preds = _predictions()
-    d = preds[preds.model == FLAGSHIP_MODEL]
-    err_sq = np.sort(((d.y_pred - d.y_true) ** 2).to_numpy())[::-1]
-    err_ab = np.sort((d.y_pred - d.y_true).abs().to_numpy())[::-1]
-    x = 100 * np.arange(1, len(err_sq) + 1) / len(err_sq)
+    d = preds[preds.model == FLAGSHIP_MODEL].sort_values("y_true", ascending=False)
+    sq = ((d.y_pred - d.y_true) ** 2).to_numpy()
+    ab = (d.y_pred - d.y_true).abs().to_numpy()
+    x = 100 * np.arange(1, len(sq) + 1) / len(sq)
 
-    fig, ax = plt.subplots(figsize=(5.6, 3.6))
-    ax.plot(x, 100 * np.cumsum(err_sq) / err_sq.sum(), color=BASELINE,
-            label="squared error", linewidth=1.8)
-    ax.plot(x, 100 * np.cumsum(err_ab) / err_ab.sum(), color=FLAGSHIP,
-            label="absolute error", linewidth=1.8)
+    # The share of records at or above 20% loss, which is the claim the text makes.
+    cut_pct = 100 * (d.y_true >= 20).mean()
+    at = int(len(sq) * cut_pct / 100)
+    share_sq = 100 * sq[:at].sum() / sq.sum()
+    share_ab = 100 * ab[:at].sum() / ab.sum()
+
+    fig, ax = plt.subplots(figsize=(6.0, 3.9))
+    ax.plot(x, 100 * np.cumsum(sq) / sq.sum(), color=BASELINE,
+            label="squared error", linewidth=1.9)
+    ax.plot(x, 100 * np.cumsum(ab) / ab.sum(), color=FLAGSHIP,
+            label="absolute error", linewidth=1.9)
     ax.plot([0, 100], [0, 100], color=NEUTRAL, linestyle=":", linewidth=1,
             label="even contribution")
-    for pct in (2.1,):
-        ax.axvline(pct, color="#444", linestyle="--", linewidth=0.9)
-        y_at = 100 * np.cumsum(err_sq)[int(len(err_sq) * pct / 100)] / err_sq.sum()
-        ax.plot([pct], [y_at], "o", color=BASELINE, ms=5)
-        ax.text(pct + 2, y_at - 3, f"worst {pct}% of records\ncarry {y_at:.0f}% of squared error",
-                fontsize=7.5, color=BASELINE)
-    ax.set_xlabel("Records, ranked worst first (%)")
+    ax.axvline(cut_pct, color="#444", linestyle="--", linewidth=0.9)
+    ax.plot([cut_pct], [share_sq], "o", color=BASELINE, ms=5.5)
+    ax.plot([cut_pct], [share_ab], "o", color=FLAGSHIP, ms=5.5)
+    # Anchored well to the right of the marker line so neither is obscured.
+    ax.annotate(f"records at or above 20% loss\n"
+                f"({cut_pct:.1f}% of records)\n"
+                f"{share_sq:.0f}% of squared error\n"
+                f"{share_ab:.0f}% of absolute error",
+                xy=(cut_pct, share_sq), xytext=(34, 9), fontsize=7.8,
+                arrowprops=dict(arrowstyle="->", color="#666", lw=0.9),
+                bbox=dict(boxstyle="round,pad=0.35", fc="white", ec="#ccc", lw=0.7))
+    ax.set_xlabel("Records, ranked by observed loss, largest first (%)")
     ax.set_ylabel("Cumulative share of total error (%)")
     ax.legend(loc="lower right", fontsize=8)
-    _wrap(ax, "F4. Squared error is concentrated in a handful of records; absolute "
-              "error spreads across the distribution.")
+    _wrap(ax, "F4. Squared error is concentrated in the records with the largest "
+              "observed losses; absolute error is spread far more evenly.")
     return _save_fig(fig, "F4", "error concentration", "3.1")
 
 
@@ -588,7 +614,7 @@ def f13_country_representation():
     ax.plot(x, cum, color=FLAGSHIP, linewidth=2)
     ax.plot([0, 100], [0, 100], color=NEUTRAL, linestyle=":", linewidth=1,
             label="even representation")
-    top10 = 100 * counts.head(10).sum() / counts.sum()
+    top10 = 100 * counts.head(10).sum() / counts.sum()   # descriptive: full frame
     ax.plot([100 * 10 / len(counts)], [top10], "o", color=BASELINE, ms=6)
     ax.text(100 * 10 / len(counts) + 3, top10 - 6,
             f"10 countries\n{top10:.1f}% of records", fontsize=7.5, color=BASELINE)
@@ -598,7 +624,9 @@ def f13_country_representation():
     ax.set_title("Concentration of records", fontsize=9)
 
     weight = _read("regional_weighting_analysis.csv")
-    agg = weight.groupby("weighting")[["mae_sparse", "mae_well_represented"]].mean()
+    weight = weight[weight.model == FLAGSHIP_MODEL]      # the text quotes this model
+    agg = (weight.groupby("weighting")[["mae_sparse", "mae_well_represented"]]
+                 .mean().reindex(["unweighted", "inverse frequency"]))
     idx = np.arange(len(agg)); w = 0.36
     ax2.bar(idx - w/2, agg.mae_sparse, w, color=BASELINE, label="sparse countries (<50 records)")
     ax2.bar(idx + w/2, agg.mae_well_represented, w, color=FLAGSHIP, label="well represented")
@@ -606,10 +634,14 @@ def f13_country_representation():
         ax2.text(i - w/2, a + 0.08, f"{a:.2f}", ha="center", fontsize=7.5)
         ax2.text(i + w/2, b + 0.08, f"{b:.2f}", ha="center", fontsize=7.5)
     ax2.set_xticks(idx); ax2.set_xticklabels(agg.index, fontsize=8)
-    ax2.set_ylabel("Mean absolute error"); ax2.legend(fontsize=7.5)
+    ax2.set_ylabel("Mean absolute error")
+    ax2.set_ylim(0, max(agg.mae_sparse) * 1.34)
+    ax2.legend(fontsize=7.5, loc="upper center", ncol=2,
+               bbox_to_anchor=(0.5, 1.0), borderaxespad=0.2)
     ax2.set_title("Error by representation, and the effect of weighting", fontsize=9)
-    fig.suptitle("F13. Ten countries supply 32.9% of records. Error is 4.7× higher for "
-                 "sparsely recorded countries, and weighting does not close the gap.",
+    fig.suptitle(f"F13. Ten countries supply {top10:.1f}% of records. Error is "
+                 f"{agg.mae_sparse['unweighted'] / agg.mae_well_represented['unweighted']:.1f}× "
+                 "higher for sparsely recorded countries, and weighting does not close the gap.",
                  fontsize=9, y=1.05)
     fig.tight_layout()
     return _save_fig(fig, "F13", "country representation", "4.4")
@@ -645,8 +677,11 @@ def f14_stage_coverage():
                                   gridspec_kw={"width_ratios": [1, 1.05]})
     dist = per_pair.value_counts().sort_index()
     ax.bar(dist.index, dist.to_numpy(), color=[BASELINE] + [FLAGSHIP] * (len(dist) - 1))
-    ax.text(1, dist.iloc[0] + 18, f"{dist.iloc[0]} pairs\nat one stage",
-            ha="center", fontsize=7.5, color=BASELINE)
+    ax.annotate(f"{dist.iloc[0]} pairs\nmeasured at\none stage only",
+                xy=(1, dist.iloc[0]), xytext=(3.1, dist.iloc[0] * 0.80),
+                fontsize=7.8, color=BASELINE,
+                arrowprops=dict(arrowstyle="->", color=BASELINE, lw=0.9))
+    ax.set_ylim(0, dist.iloc[0] * 1.12)
     ax.set_xlabel("Stages measured for a country × commodity pair")
     ax.set_ylabel("Pairs"); ax.set_xticks(range(1, min(11, dist.index.max() + 1)))
     ax.set_title("Most pairs are measured once", fontsize=9)
@@ -673,29 +708,38 @@ def f15_network_architecture():
     """F15. The actual network, replacing a borrowed diagram of a different one."""
     layers = [("input\n(encoded)", 383), ("hidden 1", 200), ("hidden 2", 100),
               ("hidden 3", 50), ("output", 1)]
-    fig, ax = plt.subplots(figsize=(7.2, 3.2))
-    xs = np.linspace(0, 1, len(layers))
-    heights = np.array([np.log10(n + 1) for _, n in layers])
-    heights = 0.22 + 0.62 * heights / heights.max()
-    for i, ((label, n), x, h) in enumerate(zip(layers, xs, heights)):
+    fig, ax = plt.subplots(figsize=(7.4, 3.4))
+
+    # Every annotation sits on a fixed row rather than following the box height,
+    # so nothing staggers or collides with the title.
+    Y_COUNT, Y_MID, Y_CONN, Y_LABEL = 0.86, 0.46, 0.20, 0.06
+    xs = np.linspace(0.08, 0.92, len(layers))
+    h = np.array([np.log10(n + 1) for _, n in layers])
+    h = 0.16 + 0.42 * h / h.max()
+
+    for i, ((label, n), x, height) in enumerate(zip(layers, xs, h)):
         colour = FLAGSHIP if 0 < i < len(layers) - 1 else NEUTRAL
-        ax.add_patch(Rectangle((x - 0.055, 0.5 - h / 2), 0.11, h,
-                               facecolor=colour, alpha=0.9))
-        ax.text(x, 0.5 + h / 2 + 0.05, f"{n:,}", ha="center", fontsize=8.5, weight="bold")
-        ax.text(x, 0.5 - h / 2 - 0.09, label, ha="center", fontsize=8)
+        ax.add_patch(Rectangle((x - 0.048, Y_MID - height / 2), 0.096, height,
+                               facecolor=colour, alpha=0.92))
+        ax.text(x, Y_COUNT, f"{n:,}", ha="center", va="center",
+                fontsize=9, weight="bold")
+        ax.text(x, Y_LABEL, label, ha="center", va="center", fontsize=8.2)
         if i < len(layers) - 1:
-            ax.add_patch(FancyArrowPatch((x + 0.058, 0.5), (xs[i + 1] - 0.058, 0.5),
-                                         arrowstyle="->", mutation_scale=11, color="#555"))
-    for i in range(len(layers) - 1):
-        n_w = layers[i][1] * layers[i + 1][1] + layers[i + 1][1]
-        ax.text((xs[i] + xs[i + 1]) / 2, 0.565, f"{n_w:,}", ha="center",
-                fontsize=7, color="#555")
-    ax.text(0.5, 0.60, "weights + biases per connection block", ha="center",
-            fontsize=7, color="#555", style="italic")
-    ax.set_xlim(-0.1, 1.1); ax.set_ylim(0.05, 0.78); ax.axis("off")
-    ax.set_title("F15. The multi-layer perceptron used here: three hidden layers, "
-                 "102,001 trainable parameters,\nReLU activation, trained by stochastic "
-                 "gradient descent.", fontsize=9)
+            mid = (x + xs[i + 1]) / 2
+            ax.add_patch(FancyArrowPatch((x + 0.052, Y_MID), (xs[i + 1] - 0.052, Y_MID),
+                                         arrowstyle="->", mutation_scale=11, color="#666"))
+            n_w = layers[i][1] * layers[i + 1][1] + layers[i + 1][1]
+            ax.text(mid, Y_CONN, f"{n_w:,}", ha="center", va="center",
+                    fontsize=7.4, color="#555")
+
+    ax.text(0.5, Y_COUNT + 0.10, "neurons per layer", ha="center", fontsize=7.6,
+            color="#777", style="italic")
+    ax.text(0.5, Y_CONN - 0.075, "weights and biases per connection block",
+            ha="center", fontsize=7.6, color="#777", style="italic")
+    ax.set_xlim(0, 1); ax.set_ylim(-0.02, 1.08); ax.axis("off")
+    ax.set_title("F15. The multi-layer perceptron used here: three hidden layers over 383 "
+                 "encoded inputs,\n102,001 trainable parameters, ReLU activation, trained by "
+                 "stochastic gradient descent.", fontsize=9, pad=14)
     return _save_fig(fig, "F15", "network architecture", "3.7")
 
 

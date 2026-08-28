@@ -6,6 +6,13 @@ All notable changes to the analysis code are recorded here.
 
 ### Fixed
 
+- Regional weighting analysis was being run on the full modelling frame
+  although it splits on time, so its test folds included the sparse
+  2022-2024 years that the validation protocol excludes. It now uses the
+  same dense span as the other time-splitting procedures.
+- Figures no longer average across models where the accompanying text
+  quotes one. The representation figure showed a mean over three models
+  while the text reported the random forest, so the two disagreed.
 - Hyperparameter searches ran on a random split spanning every year while
   evaluation held out later years, so configurations were selected with
   the test period present in the search data. Selection now sees only
@@ -50,6 +57,12 @@ All notable changes to the analysis code are recorded here.
 
 ### Changed
 
+- Figures write vector copies alongside the raster ones, with text kept as
+  text rather than converted to outlines, so a label can be adjusted in a
+  drawing program without regenerating the figure.
+- Descriptive counts are taken from the full modelling frame and
+  validation results from the dense span, consistently. Both were
+  previously in use for the same quantities in different places.
 - Comparison plotting consolidated into a single function taking the
   dimension to vary as an argument, with the remaining two held fixed. The
   previous per-dimension functions duplicated the same logic, which is why
