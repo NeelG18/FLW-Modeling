@@ -219,8 +219,8 @@ def f3_loss_distribution():
     """F3. The skew that shapes every metric choice."""
     frame = load_flw_data()
     y = frame[TARGET]
-    fig, (ax, ax2) = plt.subplots(1, 2, figsize=(7.6, 3.2),
-                                  gridspec_kw={"width_ratios": [2, 1]})
+    fig, (ax, ax2) = plt.subplots(1, 2, figsize=(7.6, 4.1),
+                                  gridspec_kw={"width_ratios": [1.9, 1]})
     ax.hist(y, bins=np.arange(0, 66, 1), color=FLAGSHIP, alpha=0.85)
     for q, style, label in ((y.median(), ":", "median"),
                             (y.quantile(0.90), "--", "90th percentile")):
@@ -239,10 +239,11 @@ def f3_loss_distribution():
     ax2.set_xlim(0, 68); ax2.set_xlabel("Share of records (%)")
     ax2.set_title("Records by band")
     below5 = 100 * (y < 5).mean()
-    fig.suptitle(f"F3. Observed loss is strongly right-skewed: {below5:.1f}% of records in the "
-                 f"modelling frame fall below 5%, and the top decile begins at "
-                 f"{y.quantile(0.90):.0f}%, which is the severity threshold used throughout.",
-                 fontsize=9, y=1.04)
+    fig.suptitle("\n".join(textwrap.wrap(
+        f"F3. Observed loss is strongly right-skewed: {below5:.1f}% of records in the modelling "
+        f"frame fall below 5%, and the top decile begins at {y.quantile(0.90):.0f}%, which is "
+        f"the severity threshold used throughout.", 92)), fontsize=9, y=1.03)
+    fig.tight_layout()
     return _save_fig(fig, "F3", "loss distribution", "3.1")
 
 
@@ -444,11 +445,13 @@ def f7_residuals():
     from visualization import plot_predicted_vs_actual, plot_residuals
     preds = _predictions()
     fig, axes = plt.subplots(1, 2, figsize=(9.6, 4.4))
-    plot_predicted_vs_actual(preds, FLAGSHIP_MODEL, ax=axes[0])
-    plot_residuals(preds, FLAGSHIP_MODEL, ax=axes[1])
-    fig.suptitle("F7. Held-out predictions. The model compresses the upper tail: no "
-                 "prediction exceeds 51.8% while observations reach 62.9%.",
-                 fontsize=9, y=1.03)
+    plot_predicted_vs_actual(preds, FLAGSHIP_MODEL, ax=axes[0], compact=True)
+    plot_residuals(preds, FLAGSHIP_MODEL, ax=axes[1], compact=True)
+    fig.suptitle("\n".join(textwrap.wrap(
+        "F7. Held-out predictions, pooled across all cutoffs. The model compresses the upper "
+        "tail: no prediction exceeds 51.8% while observations reach 62.9%. The per-cutoff means "
+        "reported in Table 5 are a different aggregation and do not coincide.", 104)),
+        fontsize=9, y=1.02)
     fig.tight_layout()
     return _save_fig(fig, "F7", "predicted vs actual and residuals", "4.2")
 

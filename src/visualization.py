@@ -177,7 +177,8 @@ def _model_predictions(predictions_df, model_name):
     return sub
 
 
-def plot_predicted_vs_actual(predictions_df, model_name, ax=None, max_points=4000, seed=0):
+def plot_predicted_vs_actual(predictions_df, model_name, ax=None, max_points=4000,
+                             seed=0, compact=False):
     """Scatter predictions against observations with the identity line.
 
     A model that only ever predicts near the mean produces a horizontal
@@ -201,10 +202,13 @@ def plot_predicted_vs_actual(predictions_df, model_name, ax=None, max_points=400
     # Pooled over every held-out record. The per-split means reported in the
     # results table are a different aggregation of the same predictions and do
     # not coincide, so the basis is stated here.
-    ax.set_title(f"Predicted vs Actual — {model_name}\n"
-                 f"pooled over all held-out records: "
-                 f"R² = {r2_score(full['y_true'], full['y_pred']):.3f}, "
-                 f"MAE = {mean_absolute_error(full['y_true'], full['y_pred']):.3f}", fontsize=11)
+    r2 = r2_score(full["y_true"], full["y_pred"])
+    mae = mean_absolute_error(full["y_true"], full["y_pred"])
+    # In a shared figure the basis is stated once in the suptitle, so the panel
+    # title stays short enough not to collide with its neighbour.
+    ax.set_title(f"Predicted vs actual\nR² = {r2:.3f}, MAE = {mae:.3f}" if compact
+                 else f"Predicted vs Actual — {model_name}\npooled over all held-out records: "
+                      f"R² = {r2:.3f}, MAE = {mae:.3f}", fontsize=10.5)
     ax.set_xlabel("Actual loss percentage (%)", fontsize=11)
     ax.set_ylabel("Predicted loss percentage (%)", fontsize=11)
     ax.grid(linestyle="--", alpha=0.4)
@@ -213,7 +217,8 @@ def plot_predicted_vs_actual(predictions_df, model_name, ax=None, max_points=400
     return ax
 
 
-def plot_residuals(predictions_df, model_name, ax=None, max_points=4000, seed=0):
+def plot_residuals(predictions_df, model_name, ax=None, max_points=4000,
+                   seed=0, compact=False):
     """Residuals against fitted values, with a zero reference line."""
     sub = _model_predictions(predictions_df, model_name)
     full_resid = sub["y_pred"] - sub["y_true"]
@@ -226,10 +231,11 @@ def plot_residuals(predictions_df, model_name, ax=None, max_points=4000, seed=0)
 
     ax.scatter(sub["y_pred"], resid, s=8, alpha=0.25, color="darkseagreen", edgecolors="none")
     ax.axhline(0, color="crimson", linestyle="--", linewidth=1.2)
-    ax.set_title(f"Residuals vs Predicted — {model_name}\n"
-                 f"pooled over all held-out records: "
-                 f"mean residual = {full_resid.mean():+.3f}, "
-                 f"sd = {full_resid.std():.3f}", fontsize=11)
+    ax.set_title(f"Residuals vs fitted\nmean {full_resid.mean():+.3f}, sd {full_resid.std():.3f}"
+                 if compact else
+                 f"Residuals vs Predicted — {model_name}\npooled over all held-out records: "
+                 f"mean residual = {full_resid.mean():+.3f}, sd = {full_resid.std():.3f}",
+                 fontsize=10.5)
     ax.set_xlabel("Predicted loss percentage (%)", fontsize=11)
     ax.set_ylabel("Residual (predicted − actual)", fontsize=11)
     ax.grid(linestyle="--", alpha=0.4)
