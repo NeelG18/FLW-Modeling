@@ -54,6 +54,21 @@ Pinned versions matter: several models (KNN, tree ensembles) shift in the
 third decimal place across library versions, so reported numbers are only
 reproducible against the pinned stack.
 
+## Reproducing every figure and table
+
+```bash
+cd src && ../.venv/bin/python figures.py
+```
+
+That single command regenerates all 26 exhibits (16 figures, 10 tables) from
+the result tables in `results/`, writing PNG, SVG and PDF for each figure and a
+CSV for each table, plus `results/figure_manifest.csv` recording what was
+built. Every exhibit is produced from the stored results rather than typed by
+hand, so a figure cannot drift from the numbers it depicts.
+
+Note that the figure filenames follow generation order, which is not the
+numbering used in the write-up.
+
 ## Running
 
 ```bash
@@ -71,3 +86,11 @@ Eight regressors are compared: linear regression, ridge, polynomial ridge,
 k-nearest neighbours, support vector regression, decision tree, random
 forest, and a multi-layer perceptron. Each is scored against two naive
 baselines — group-level persistence and a per-group linear time trend.
+
+## License
+
+Code in this repository is released under the MIT License (see `LICENSE`).
+
+`data/flwData2.csv` is an extract from the UN FAO Food Loss and Waste
+Database and remains subject to FAO's terms of use; it is redistributed here
+only to make the analysis reproducible.
