@@ -1,8 +1,16 @@
-# Predicting Global Food Loss and Waste with Regression Models
+# Ranking, not estimating: time-aware validation of machine learning on the UN Food Loss and Waste Database
 
-Comparative regression modelling of food loss and waste (FLW) percentages
-using the United Nations FLW database, with time-aware validation against
-naive forecasting baselines.
+Code and results for a comparison of eight regression models on food loss and
+waste (FLW) percentages from the United Nations FLW database, validated in ways
+that respect the structure of the data and scored against naive forecasting
+baselines.
+
+The headline finding is that the models rank far better than they estimate.
+Against a baseline that repeats each group's last recorded value, no model
+consistently improves on absolute error, and predictions understate severe
+losses. Ordering is a different matter: at a 10% severity threshold the random
+forest reaches an average precision of 0.434 against the baseline's 0.333, at
+every cutoff tested.
 
 ## Data
 
